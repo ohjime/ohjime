@@ -1,2 +1,0 @@
-# commitlint config (yaml)
-extends: ['@commitlint/config-conventional']
