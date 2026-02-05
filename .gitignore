@@ -59,3 +59,5 @@ generated-images
 test-output
 __pycache__
 static/assets/processed
+docs.demo/
+pending/
