@@ -145,7 +145,6 @@ module.exports = async function createConfigAsync() {
             },
             { to: '/blog', label: 'Blog', position: 'left' },
             { to: '/things', label: 'Things', position: 'left' },
-            { to: '/tools', label: 'Tools', position: 'left' },
             {
               href: 'https://github.com/ohjime/',
               position: 'right',
