@@ -1,0 +1,17 @@
+{
+  "name": "Ozzy's Korner",
+  "short_name": "Ozzy's Korner",
+  "theme_color": "#e011c1",
+  "background_color": "#e011c1",
+  "display": "standalone",
+  "orientation": "portrait",
+  "scope": "/",
+  "start_url": "/",
+  "icons": [
+    {
+      "src": "images/icons/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

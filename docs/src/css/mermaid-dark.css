@@ -1,0 +1,5 @@
+/* Force mermaid arrows and text to be visible in Docusaurus dark mode */
+html[data-theme='dark'] {
+  --mermaid-edge-stroke: #fff !important;
+  --mermaid-node-text-color: #fff !important;
+}

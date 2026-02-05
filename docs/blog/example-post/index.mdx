@@ -1,0 +1,177 @@
+---
+slug: example-post
+title: An Example Post
+description:
+  An example post demonstrating various MDX components.
+authors: [ozzy]
+tags:
+  - Example
+  - Guide
+  - Sample
+keywords:
+  - Example
+  - Guide
+  - Sample
+---
+
+import ImageWrapper from '@site/src/components/ImageWrapper'
+import Image from '@theme/IdealImage'
+
+# MDX Component Examples
+
+Just a random post to show various mdx features
+
+<!-- truncate -->
+
+## 1. Image with a Caption
+
+Here's an example of a single image with a caption:
+
+<img
+  src="https://picsum.photos/id/237/800/400"
+  alt="Screenshot of a terminal window with 4-split panes, showing off colours, prompt and functionality"
+/>
+
+## 2. Two Images Side by Side
+
+Use the `ImageWrapper` component to display images side by side:
+
+<ImageWrapper>
+  <img
+    src="https://picsum.photos/id/0/400/300"
+    alt="Picture showing a historical terminal; the keyboard and a display of a DEC VT100"
+  />
+  <img
+    src="https://picsum.photos/id/1/400/300"
+    alt="Picture showing a modern terminal; a window with tabbed shells"
+  />
+</ImageWrapper>
+
+## 3. Expandable Information Note
+
+Use `<details>` and `<summary>` tags to create expandable sections:
+
+<details>
+  <summary>Click to expand and see more information</summary>
+
+  Here's the hidden content that appears when you expand this section.
+
+  <img
+    src="https://picsum.photos/id/10/600/300"
+    alt="Screenshot of a terminal window with 4-split panes"
+  />
+
+  You can include any content here:
+  - Lists
+  - Images
+  - Code blocks
+  - [Links](https://example.com)
+
+</details>
+
+## 4. Example Note
+
+Use the `:::note` syntax to create informational notes:
+
+:::note
+
+This is a basic note. 
+
+:::
+
+:::note Example
+
+This is a note with a custom title.
+
+:::
+
+:::tip
+
+This is a tip! You can also use `:::tip`, `:::warning`, `:::caution`, and `:::danger` for different types of admonitions.
+
+:::
+
+## 5. SVG Image
+
+SVG images are handled the same way as regular images:
+
+<img
+  src="https://picsum.photos/id/20/800/400"
+  alt="Example SVG or image file"
+/>
+
+## 6. Command Line Code
+
+Display command-line code with syntax highlighting:
+
+### Bash Example
+
+```bash
+echo hello world
+```
+
+### JSON Example
+
+```json
+{
+  "lorem": {
+    "ipsum": {
+      "dolor": "sit amet",
+      "consectetur": "adipiscing elit",
+      "sed": {
+        "do": "eiusmod tempor",
+        "incididunt": 42
+      }
+    }
+  }
+}
+```
+
+## 7. Table
+
+Create tables using standard Markdown syntax:
+
+### Basic Table
+
+| Lorem                                                 | Ipsum     | Dolor Sit                                    |
+| ----------------------------------------------------- | --------- | -------------------------------------------- |
+| [`consectetur`](https://example.com/)                 | ✅        | `adipiscing elit sed do`                     |
+| [`eiusmod tempor`](https://example.com/)              | ✅        | `incididunt ut labore`                       |
+| [`dolore magna`](https://example.com/)                | ❌        | [aliqua enim](https://example.com/)          |
+| [`minim veniam`](https://example.com/)                | ❌        | [quis nostrud](https://example.com/)         |
+
+### Glossary Table
+
+| Lorem                                      | Ipsum                                                                   | Dolor                                                    |
+| ------------------------------------------ | ----------------------------------------------------------------------- | -------------------------------------------------------- |
+| Consectetur adipiscing / Elit sed / Do     | Eiusmod tempor incididunt ut labore                                     | Dolore magna, Aliqua enim, Minim veniam, Quis, Nostrud   |
+| Exercitation                               | Ullamco laboris nisi ut aliquip ex ea commodo consequat                 | Duis, Aute, Irure, Dolor, Reprehenderit                  |
+| Voluptate                                  | Velit esse cillum dolore eu fugiat nulla pariatur                       | Excepteur sint, Occaecat, Cupidatat, Non proident        |
+| Culpa                                      | Qui officia deserunt mollit anim id est laborum                         | Sed perspiciatis, Unde omnis, Iste natus                 |
+
+## 8. Math Equations (KaTeX)
+
+You can write beautiful math equations using KaTeX:
+
+### Inline Math
+
+Write inline math by wrapping LaTeX equations between `$`:
+
+Let $f\colon[a,b]\to\mathbb{R}$ be Riemann integrable. Let $F\colon[a,b]\to\mathbb{R}$ be $F(x)=\int_{a}^{x} f(t)\,dt$. Then $F$ is continuous, and at all $x$ such that $f$ is continuous at $x$, $F$ is differentiable at $x$ with $F'(x)=f(x)$.
+
+
+### Block Math
+
+For display mode equations, use `$$`:
+
+$$
+I = \int_0^{2\pi} \sin(x)\,dx
+$$
+
+$$
+E = mc^2
+$$
+
+## Conclusion
+
+This example post demonstrates all the key MDX components you can use in your blog posts. Mix and match these elements to create engaging and informative content!
