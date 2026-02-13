@@ -4,6 +4,7 @@
 const lightCodeTheme = require('prism-react-renderer').themes.vsLight;
 const darkCodeTheme = require('prism-react-renderer').themes.vsDark;
 const tailwindPlugin = require('./src/plugins/tailwind-config.cjs');
+const rustLivePlugin = require('./src/remark/rust-live');
 
 /** @type {() => Promise<import('@docusaurus/types').Config>} */
 module.exports = async function createConfigAsync() {
@@ -55,7 +56,7 @@ module.exports = async function createConfigAsync() {
           path: 'blog',
           showReadingTime: true,
           editUrl: 'https://github.com/ohjime/portfolio/tree/main/docs/',
-          remarkPlugins: [remarkMath],
+          remarkPlugins: [remarkMath, rustLivePlugin],
           rehypePlugins: [rehypeKatex],
         },
       ],
@@ -88,7 +89,7 @@ module.exports = async function createConfigAsync() {
           },
           blogListComponent: '@site/src/theme/concepts/BlogListPage',
           blogPostComponent: '@site/src/theme/concepts/BlogPostPage',
-          remarkPlugins: [remarkMath],
+          remarkPlugins: [remarkMath, rustLivePlugin],
           rehypePlugins: [rehypeKatex],
         },
       ],
@@ -107,7 +108,7 @@ module.exports = async function createConfigAsync() {
             breadcrumbs: true,
             admonitions: true,
             showLastUpdateTime: true,
-            remarkPlugins: [remarkMath],
+            remarkPlugins: [remarkMath, rustLivePlugin],
             rehypePlugins: [rehypeKatex],
           },
           blog: false, // Disabled because we're using separate blog plugins

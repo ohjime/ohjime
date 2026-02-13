@@ -17,11 +17,11 @@ keywords:
 import ImageWrapper from '@site/src/components/ImageWrapper'
 import Image from '@theme/IdealImage'
 
+{/* truncate */}
+
 # MDX Component Examples
 
 Just a random post to show various mdx features
-
-<!-- truncate -->
 
 ## 1. Image with a Caption
 
@@ -165,12 +165,23 @@ Let $f\colon[a,b]\to\mathbb{R}$ be Riemann integrable. Let $F\colon[a,b]\to\math
 For display mode equations, use `$$`:
 
 $$
-I = \int_0^{2\pi} \sin(x)\,dx
+I = \int_0^\{2\pi\} \sin(x)\,dx
 $$
 
 $$
 E = mc^2
 $$
+
+### Interactive Code Snippet
+
+Here is an example of using the Rust Playground to create an interactive code snippet:
+
+```rust live file=./assets/include_1.rs
+fn main() {
+    let hidden = HiddenStruct::new();
+    println!("We have: {:?}", hidden);
+}
+```
 
 ## Conclusion
 
