@@ -60,3 +60,4 @@ __pycache__
 static/assets/processed
 docs.demo/
 pending/
+tmp/
