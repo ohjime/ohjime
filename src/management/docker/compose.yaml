@@ -1,0 +1,62 @@
+# Gemma 4 (E2B, Google QAT W4A16) on the local RTX 2080 Ti via patched vLLM.
+#
+# One-time host prerequisite (gives Docker access to the GPU):
+#   sudo ./setup-nvidia-container-toolkit.sh
+#
+# Then, from this directory:
+#   docker compose up -d --build
+#   curl http://localhost:8000/v1/models
+#
+# NOTE: binds the same port 8000 as the host's `vllm.service` (Qwen3).
+# Stop one before starting the other:  sudo systemctl stop vllm.service
+
+name: adk-demo-gemma4
+
+services:
+  vllm-gemma4:
+    build: .
+    image: adk-demo/vllm-gemma4-turing:v0.25.0
+    container_name: vllm-gemma4
+    gpus: all
+    ipc: host # PyTorch needs more than Docker's default 64 MB /dev/shm
+    ports:
+      - "8000:8000"
+    volumes:
+      # Share the host HF cache so models download once.
+      - ${HF_HOME:-~/.cache/huggingface}:/root/.cache/huggingface
+    # Entrypoint is `vllm serve`; this list is the model + its flags.
+    command:
+      # Google's official QAT W4A16 quant (~8.3 GB). The only Gemma 4
+      # that fits 11 GB VRAM: every E4B INT4 quant is 10-11.5 GB because
+      # the per-layer-embedding tables stay bf16. Ungated, Apache-2.0.
+      # On SM 7.5 the W4A16 layers run on the Exllama kernel fallback
+      # (Marlin/Machete need SM >= 8.0).
+      - google/gemma-4-E2B-it-qat-w4a16-ct
+      # The only backend that works on SM 7.5, via the PR #39018 patch
+      # baked into this image (see Dockerfile).
+      - --attention-backend=TRITON_ATTN
+      # Turing has no bfloat16. The known fp16 overflow bug (vLLM
+      # issue #40290) is in the 31B/26B vision tower; E2B is not
+      # affected, and its vision/audio towers are disabled below anyway.
+      - --dtype=float16
+      - --max-model-len=8192
+      - --gpu-memory-utilization=0.90
+      - --max-num-seqs=8
+      # Skip CUDA graph capture: saves VRAM headroom on the 11 GB card
+      # and startup time, at some decode-throughput cost.
+      - --enforce-eager
+      # Text-only serving: skips the vision/audio encoders (saves VRAM,
+      # and sidesteps their fp16 quirks entirely).
+      - '--limit-mm-per-prompt={"image":0,"audio":0}'
+      # Tool calling for the ADK agent (Gemma 4 tool-call protocol).
+      - --enable-auto-tool-choice
+      - --tool-call-parser=gemma4
+      - --reasoning-parser=gemma4
+      - --chat-template=/vllm-workspace/examples/tool_chat_template_gemma4.jinja
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10m # first start downloads ~8.3 GB of weights
+    restart: unless-stopped

@@ -1,0 +1,25 @@
+[project]
+name = "adk-demo"
+version = "0.1.0"
+description = "Google ADK agent demo backed by a local vLLM server via LiteLLM"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "google-adk>=1.0.0",
+    "litellm>=1.63.0",
+    "python-dotenv>=1.0.1",
+    # LiteLLM's hosted_vllm provider path imports orjson but doesn't pin it.
+    "orjson>=3.10.0",
+]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.6.0",
+]
+
+[tool.uv]
+# App-style project: don't try to build/install `adk-demo` itself as a wheel.
+package = false
+
+[tool.ruff]
+line-length = 100
