@@ -216,4 +216,5 @@ html[data-theme='dark'] .navbar-github-icon:before {
 
 .navbar__title {
     font-family: 'Cute Easter Font', cursive;
+    margin-left: 0.75rem;
 }
