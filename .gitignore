@@ -7,7 +7,6 @@
 !.idea/jsLinters
 !.idea/inspectionProfiles
 !.idea/codeStyles
-/.vscode
 
 # Private variables
 *.log
