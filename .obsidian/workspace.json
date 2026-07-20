@@ -4,17 +4,19 @@
     "type": "split",
     "children": [
       {
-        "id": "6f6874330239dd74",
+        "id": "e790d0ccf1287cb1",
         "type": "tabs",
         "children": [
           {
-            "id": "0b59ad9e8379e06d",
+            "id": "94c9024896e431eb",
             "type": "leaf",
             "state": {
-              "type": "empty",
-              "state": {},
-              "icon": "lucide-file",
-              "title": "New tab"
+              "type": "image",
+              "state": {
+                "file": "docs/blog/example/assets/empty.png"
+              },
+              "icon": "lucide-image",
+              "title": "empty"
             }
           }
         ]
@@ -90,6 +92,7 @@
             "state": {
               "type": "backlink",
               "state": {
+                "file": "docs/blog/example/assets/empty.png",
                 "collapseAll": false,
                 "extraContext": true,
                 "sortOrder": "alphabetical",
@@ -99,7 +102,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Backlinks"
+              "title": "Backlinks for empty"
             }
           },
           {
@@ -175,12 +178,18 @@
       "daily-notes:Open today's daily note": true,
       "templates:Insert template": true,
       "command-palette:Open command palette": true,
-      "bases:Create new base": true
+      "bases:Create new base": true,
+      "obsidian-focus-mode:Toggle Focus Mode (Shift + Click to show active pane only)": false
     }
   },
-  "active": "0b59ad9e8379e06d",
+  "active": "94c9024896e431eb",
   "lastOpenFiles": [
+    "docs/blog/example/index.mdx",
+    "docs/things/thing3.md",
+    "docs/things/thing2.md",
+    "docs/things/thing1.md",
     "README.md",
+    "Untitled.md",
     "Makefile",
     "tmp/cosound/sound_classification_ideas.md",
     "tmp/cosound/iso12913_to_sam.md",
@@ -193,7 +202,6 @@
     "docs/src/theme/concepts/concepts/components/ProcessedImage.spec.tsx",
     "docs/src/theme/concepts/concepts/components/OptimizedThumbnail.tsx",
     "docs/src/theme/concepts/concepts/BlogPostPage/index.tsx",
-    "docs/src/theme/concepts/concepts/BlogListPage/index.tsx",
     "docs/notes/quantum/information/measure/assets/empty.png",
     "docs/notes/quantum/information/operations/assets/empty.png",
     "docs/notes/quantum/information/theory/assets/empty.png",
@@ -204,9 +212,6 @@
     "docs/notes/quantum/computing/hardware/assets/empty.png",
     "docs/notes/quantum/computing/circuits/assets/empty.png",
     "docs/notes/quantum/mechanics/assets/empty.png",
-    "docs/things/thing3.md",
-    "docs/things/thing2.md",
-    "docs/things/thing1.md",
     "docs/notes/index.md",
     "brain/knowledge/tertiary/README.md",
     "brain/knowledge/personal/README.md",
