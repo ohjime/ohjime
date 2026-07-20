@@ -1,0 +1,7 @@
+```chat
+{{  |
+
+<% tp.file.cursor(1) %>
+
+| <% tp.date.now("h:mm A") %> }}
+```

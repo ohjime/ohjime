@@ -4,21 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "4401a202664d3c70",
+        "id": "568fa9be825ca80e",
         "type": "tabs",
         "children": [
           {
-            "id": "aa1e1e5b587f748d",
+            "id": "44920e09f37fc5a4",
             "type": "leaf",
             "state": {
-              "type": "markdown",
+              "type": "diff-view",
               "state": {
-                "file": "brain/actions/README.md",
-                "mode": "source",
-                "source": false
+                "aFile": "brain/thoughts/2026-07-20.md",
+                "bFile": "brain/thoughts/2026-07-20.md",
+                "aRef": ""
               },
-              "icon": "lucide-file",
-              "title": "README"
+              "icon": "git-pull-request",
+              "title": "Diff: 2026-07-20"
             }
           }
         ]
@@ -100,8 +100,7 @@
         }
       }
     ],
-    "currentTab": 0,
-    "pinned": true
+    "currentTab": 0
   },
   "right": {
     "id": "04cf0e8e7dc865ad",
@@ -113,6 +112,7 @@
         "state": {
           "type": "backlink",
           "state": {
+            "file": "brain/thoughts/Untitled.md",
             "collapseAll": false,
             "extraContext": false,
             "sortOrder": "alphabetical",
@@ -131,6 +131,7 @@
         "state": {
           "type": "outgoing-link",
           "state": {
+            "file": "brain/thoughts/Untitled.md",
             "linksCollapsed": false,
             "unlinkedCollapsed": true
           },
@@ -173,45 +174,48 @@
       "daily-notes:Open today's daily note": false,
       "templates:Insert template": false,
       "command-palette:Open command palette": false,
+      "obsidian-git:Open Git source control": false,
       "bases:Create new base": false,
-      "obsidian-git:Open Git source control": false
+      "templater-obsidian:Templater": false
     }
   },
-  "active": "aa1e1e5b587f748d",
+  "active": "44920e09f37fc5a4",
   "lastOpenFiles": [
+    "brain/thoughts/2026-07-20.md",
+    "brain/thoughts/README.md",
+    "brain/thoughts/2026-07-19-16.md",
+    "docs/blog/example/index.mdx",
+    "docs/blog/example/assets/empty.png",
+    "docs/blog/example/assets/include_1.rs",
+    "docs/blog/example/assets",
+    "docs/blog/example",
+    "/docs/blog/example/index.mdx",
+    "/docs/blog/example/assets/include_1.rs",
+    "/docs/blog/example/assets/empty.png",
+    "/docs/blog/example/assets",
+    "/docs/blog/example",
+    "/docs/blog/example-post/assets",
+    "/docs/blog/example-post",
+    "docs/static/assets/things/qamar.jpg",
+    "docs/blog/example-post/assets/empty.png",
+    "docs/things/thing1.md",
+    "docs/notes/index.md",
+    "brain/actions/README.md",
     "brain/knowledge/primary/README.md",
-    "brain/knowledge/primary",
     "brain/knowledge/secondary/README.md",
-    "brain/knowledge/secondary",
     "brain/knowledge/personal/README.md",
-    "brain/knowledge/personal",
     "brain/knowledge/tertiary/README.md",
-    "brain/knowledge/tertiary",
     "docs/notes/quantum/computing/fourier/assets/empty.png",
-    "docs/notes/quantum/computing/hardware/assets/include_1.rs",
     "docs/notes/quantum/information/operations/assets/empty.png",
-    "docs/src/theme/BlogPostItem/Header/Title/index.tsx",
-    "docs/notes/quantum/information/measure/assets/include_1.rs",
     "docs/notes/quantum/computing/hardware/assets/empty.png",
-    "docs/notes/quantum/information/entropy/assets/include_1.rs",
-    "docs/src/theme/concepts/BlogPostPage/index.tsx",
-    "docs/notes/quantum/information/correction/assets/include_1.rs",
     "docs/notes/quantum/computing/search/assets/empty.png",
     "docs/notes/quantum/information/correction/assets/empty.png",
     "docs/notes/quantum/information/theory/assets/empty.png",
-    "docs/notes/quantum/information/entropy/assets/empty.png",
-    "docs/notes/quantum/computing/circuits/assets/empty.png",
-    "docs/notes/quantum/information/measure/assets/empty.png",
-    "docs/notes/quantum/mechanics/assets/empty.png",
-    "brain/thoughts/README.md",
     "brain/thoughts/cosound_research.md",
-    "brain/actions/README.md",
     "brain/objectives/README.md",
     "brain/thoughts/cosound_origins.md",
-    "docs/things/thing1.md",
     "docs/things/thing2.md",
     "docs/things/thing3.md",
-    "docs/notes/index.md",
     "README.md"
   ]
 }
