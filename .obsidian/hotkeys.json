@@ -1,0 +1,19 @@
+{
+  "file-explorer:new-file": [],
+  "quickadd:choice:b286d387-8146-40c0-92b8-5acc4e6a45bb": [
+    {
+      "modifiers": [
+        "Ctrl"
+      ],
+      "key": "T"
+    }
+  ],
+  "quickadd:choice:9fdea97a-dfd1-4c96-a5fc-f10f2dc28aa3": [
+    {
+      "modifiers": [
+        "Ctrl"
+      ],
+      "key": "A"
+    }
+  ]
+}

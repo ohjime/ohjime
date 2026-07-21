@@ -4,5 +4,8 @@
   "templater-obsidian",
   "obsidian-chat-view",
   "file-explorer-plus",
-  "obsidian-hider"
+  "obsidian-hider",
+  "quickadd",
+  "yesterday",
+  "chat-bubble-renderer"
 ]

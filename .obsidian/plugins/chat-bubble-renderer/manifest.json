@@ -1,0 +1,10 @@
+{
+	"id": "chat-bubble-renderer",
+	"name": "Chat Bubble Renderer",
+	"version": "2.0.0",
+	"minAppVersion": "1.5.0",
+	"description": "Render Markdown chat logs as WeChat-style bubble dialogs. 将聊天记录渲染为微信风格气泡对话框.",
+	"author": "bruce2431",
+	"authorUrl": "https://github.com/bruce2431",
+	"isDesktopOnly": false
+}

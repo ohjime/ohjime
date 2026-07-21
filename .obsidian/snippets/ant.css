@@ -1,0 +1,227 @@
+/* ========================================= */
+/* CUSTOM THOUGHT BLOCKS (START & END)       */
+/* ========================================= */
+
+/* ------------------------------ */
+/* START THOUGHT (Dots on Top)    */
+/* ------------------------------ */
+
+.callout[data-callout="start-thought"] {
+  display: flex;
+  flex-direction: column; /* Stacks the dots on top of the text/line row */
+  padding: 0;
+  margin: 1.5em 0 0.5em 0; 
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.callout[data-callout="start-thought"] .callout-icon,
+.callout[data-callout="start-thought"] .callout-content {
+  display: none;
+}
+
+/* Row 1: Three centered gray dots on top */
+.callout[data-callout="start-thought"]::before {
+  content: "•   •   •";
+  white-space: pre; 
+  text-align: center;
+  width: 100%;
+  color: var(--text-muted); 
+  font-size: 1.2em;
+  margin-bottom: 0.5em; /* Space between the dots and the line below */
+  order: 1;
+}
+
+/* Row 2: The line and text */
+.callout[data-callout="start-thought"] .callout-title {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 10px;
+  padding: 0;
+  font-size: var(--font-text-size);
+  color: #2e7d32;
+  order: 2;
+}
+
+.callout[data-callout="start-thought"] .callout-title-inner {
+  font-style: italic; 
+  font-weight: 300;   
+}
+
+.callout[data-callout="start-thought"] .callout-title-inner::before {
+  content: "Thought ";
+  font-weight: bold;
+  font-style: normal; 
+}
+
+/* The expanding line on the LEFT */
+.callout[data-callout="start-thought"] .callout-title::before {
+  content: "";
+  flex-grow: 1;
+  height: 1px;
+  background-color: #2e7d32;
+  margin-top: 4px;
+}
+
+/* ------------------------------ */
+/* END THOUGHT (Left Aligned)     */
+/* ------------------------------ */
+
+.callout[data-callout="end-thought"] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  margin: 1.5em 0 0.5em 0; 
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.callout[data-callout="end-thought"] .callout-icon,
+.callout[data-callout="end-thought"] .callout-content {
+  display: none;
+}
+
+.callout[data-callout="end-thought"] .callout-title {
+  padding: 0;
+  font-size: var(--font-text-size);
+  color: #2e7d32;
+}
+
+.callout[data-callout="end-thought"] .callout-title-inner {
+  font-size: 0;
+}
+
+.callout[data-callout="end-thought"] .callout-title-inner::before {
+  content: "End Thought";
+  font-weight: 300;
+  font-style: italic;
+  font-family: "Snell Roundhand", "Apple Chancery", "Bradley Hand", cursive;
+  font-size: 1.1rem;
+}
+
+/* The expanding line on the RIGHT */
+.callout[data-callout="end-thought"]::after {
+  content: "";
+  flex-grow: 1;
+  height: 1px;
+  background-color: #2e7d32;
+  margin-top: 4px;
+}
+
+/* ========================================= */
+/* CUSTOM ACTION BLOCKS (START & END)        */
+/* ========================================= */
+
+/* ------------------------------ */
+/* START ACTION (Dots on Top)     */
+/* ------------------------------ */
+
+.callout[data-callout="start-action"] {
+  display: flex;
+  flex-direction: column; 
+  padding: 0;
+  margin: 1.5em 0 0.5em 0; 
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.callout[data-callout="start-action"] .callout-icon,
+.callout[data-callout="start-action"] .callout-content {
+  display: none;
+}
+
+/* Row 1: Three centered gray dots on top */
+.callout[data-callout="start-action"]::before {
+  content: "•   •   •";
+  white-space: pre; 
+  text-align: center;
+  width: 100%;
+  color: var(--text-muted); 
+  font-size: 1.2em;
+  margin-bottom: 0.5em; 
+  order: 1;
+}
+
+/* Row 2: The line and text */
+.callout[data-callout="start-action"] .callout-title {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  gap: 10px;
+  padding: 0;
+  font-size: var(--font-text-size);
+  color: #1976d2; /* Rich blue color */
+  order: 2;
+}
+
+.callout[data-callout="start-action"] .callout-title-inner {
+  font-style: italic; 
+  font-weight: 300;   
+}
+
+.callout[data-callout="start-action"] .callout-title-inner::before {
+  content: "Acted ";
+  font-weight: bold;
+  font-style: normal; 
+}
+
+/* The expanding line on the LEFT */
+.callout[data-callout="start-action"] .callout-title::before {
+  content: "";
+  flex-grow: 1;
+  height: 1px;
+  background-color: #1976d2;
+  margin-top: 4px;
+}
+
+/* ------------------------------ */
+/* END ACTION (Left Aligned)      */
+/* ------------------------------ */
+
+.callout[data-callout="end-action"] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  margin: 1.5em 0 0.5em 0; 
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.callout[data-callout="end-action"] .callout-icon,
+.callout[data-callout="end-action"] .callout-content {
+  display: none;
+}
+
+.callout[data-callout="end-action"] .callout-title {
+  padding: 0;
+  font-size: var(--font-text-size);
+  color: #1976d2; /* Rich blue color */
+}
+
+.callout[data-callout="end-action"] .callout-title-inner {
+  font-size: 0;
+}
+
+.callout[data-callout="end-action"] .callout-title-inner::before {
+  content: "End Action";
+  font-weight: 300;
+  font-style: italic;
+  font-family: "Snell Roundhand", "Apple Chancery", "Bradley Hand", cursive;
+  font-size: 1.1rem;
+}
+
+/* The expanding line on the RIGHT */
+.callout[data-callout="end-action"]::after {
+  content: "";
+  flex-grow: 1;
+  height: 1px;
+  background-color: #1976d2;
+  margin-top: 4px;
+}

@@ -1,3 +1,7 @@
 {
-  "showRibbon": false
+  "showRibbon": false,
+  "translucency": true,
+  "enabledCssSnippets": [
+    "ant"
+  ]
 }
