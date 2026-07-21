@@ -4,21 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "4f3dfc9ef56d7f67",
+        "id": "538e8c0b3b92689f",
         "type": "tabs",
         "children": [
           {
-            "id": "cafdf77ac88619a8",
+            "id": "cb959337f697ab3a",
             "type": "leaf",
             "state": {
-              "type": "diff-view",
+              "type": "markdown",
               "state": {
-                "aFile": ".obsidian/workspace-mobile.json",
-                "bFile": ".obsidian/workspace-mobile.json",
-                "aRef": ""
+                "file": "dump/LOG-2026-07-21.md",
+                "mode": "source",
+                "source": false
               },
-              "icon": "git-pull-request",
-              "title": "Diff: workspace-mobile.json"
+              "icon": "lucide-file",
+              "title": "LOG-2026-07-21"
             }
           }
         ]
@@ -181,22 +181,23 @@
       "templater-obsidian:Templater": false
     }
   },
-  "active": "cafdf77ac88619a8",
+  "active": "cb959337f697ab3a",
   "lastOpenFiles": [
+    "docs/posts/example/index.mdx",
     "dump/LOG-2026-07-21.md",
+    "templates",
+    "docs/things/thing1.md",
+    "docs/notes/quantum-computing/index.mdx",
     "brain/thoughts/2026-07-20.md",
     "dump",
     "docs/posts/example/assets/empty.png",
     "docs/posts/example/assets/include_1.rs",
-    "docs/posts/example/index.mdx",
     "docs/posts/authors.yml",
     "docs/posts/example",
     "docs/posts",
     "/docs/posts/example/assets/empty.png",
     "/docs/posts/example/index.mdx",
     "/docs/posts/example/assets/include_1.rs",
-    "/docs/posts/authors.yml",
-    "/docs/posts/example/assets",
     "/dump/LOG-2026-07-21.md",
     "brain/thoughts/README.md",
     "brain/thoughts/2026-07-19-16.md",
@@ -204,7 +205,6 @@
     "/docs/blog/example/assets/empty.png",
     "docs/static/assets/things/qamar.jpg",
     "docs/blog/example-post/assets/empty.png",
-    "docs/things/thing1.md",
     "docs/notes/index.md",
     "brain/actions/README.md",
     "brain/knowledge/primary/README.md",

@@ -3,5 +3,6 @@
   "translucency": true,
   "enabledCssSnippets": [
     "ant"
-  ]
+  ],
+  "cssTheme": "AnuPpuccin"
 }
