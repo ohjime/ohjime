@@ -51,9 +51,9 @@ module.exports = async function createConfigAsync() {
       [
         '@docusaurus/plugin-content-blog',
         {
-          id: 'blog',
-          routeBasePath: '/blog/',
-          path: 'blog',
+          id: 'posts',
+          routeBasePath: '/posts/',
+          path: 'posts',
           showReadingTime: true,
           editUrl: 'https://github.com/ohjime/portfolio/tree/main/docs/',
           remarkPlugins: [remarkMath, rustLivePlugin],
@@ -144,7 +144,7 @@ module.exports = async function createConfigAsync() {
               position: 'left',
               label: 'Notes',
             },
-            { to: '/blog', label: 'Blog', position: 'left' },
+            { to: '/posts', label: 'Posts', position: 'left' },
             { to: '/things', label: 'Things', position: 'left' },
             {
               href: 'https://github.com/ohjime/',
@@ -168,8 +168,8 @@ module.exports = async function createConfigAsync() {
                   label: 'Notes',
                 },
                 {
-                  label: 'Blog',
-                  to: '/blog',
+                  label: 'Posts',
+                  to: '/posts/',
                 },
                 {
                   label: 'Things',
