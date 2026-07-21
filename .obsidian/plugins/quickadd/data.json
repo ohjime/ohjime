@@ -12,8 +12,8 @@
       "activeFileWritePosition": "cursor",
       "createFileIfItDoesntExist": {
         "enabled": true,
-        "createWithTemplate": false,
-        "template": ""
+        "createWithTemplate": true,
+        "template": "templates/DUMP.md"
       },
       "format": {
         "enabled": true,
@@ -59,8 +59,8 @@
       "activeFileWritePosition": "cursor",
       "createFileIfItDoesntExist": {
         "enabled": true,
-        "createWithTemplate": false,
-        "template": ""
+        "createWithTemplate": true,
+        "template": "templates/DUMP.md"
       },
       "format": {
         "enabled": true,
