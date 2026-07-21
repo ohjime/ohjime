@@ -171,7 +171,7 @@
 }
 
 /* The expanding line on the LEFT */
-.callout[data-callout="start-action"] .callout-title::before {
+.callout[data-callout="start-action"] .callout-title::after {
   content: "";
   flex-grow: 1;
   height: 1px;
@@ -209,7 +209,7 @@
   font-size: 0;
 }
 
-.callout[data-callout="end-action"] .callout-title-inner::before {
+.callout[data-callout="end-action"] .callout-title-inner::after {
   content: "End Action";
   font-weight: 300;
   font-style: italic;
@@ -218,7 +218,7 @@
 }
 
 /* The expanding line on the RIGHT */
-.callout[data-callout="end-action"]::after {
+.callout[data-callout="end-action"]::before {
   content: "";
   flex-grow: 1;
   height: 1px;
