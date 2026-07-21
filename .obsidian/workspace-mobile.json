@@ -4,21 +4,21 @@
     "type": "split",
     "children": [
       {
-        "id": "568fa9be825ca80e",
+        "id": "4f3dfc9ef56d7f67",
         "type": "tabs",
         "children": [
           {
-            "id": "44920e09f37fc5a4",
+            "id": "cafdf77ac88619a8",
             "type": "leaf",
             "state": {
               "type": "diff-view",
               "state": {
-                "aFile": "brain/thoughts/2026-07-20.md",
-                "bFile": "brain/thoughts/2026-07-20.md",
+                "aFile": ".obsidian/workspace-mobile.json",
+                "bFile": ".obsidian/workspace-mobile.json",
                 "aRef": ""
               },
               "icon": "git-pull-request",
-              "title": "Diff: 2026-07-20"
+              "title": "Diff: workspace-mobile.json"
             }
           }
         ]
@@ -168,6 +168,8 @@
   },
   "left-ribbon": {
     "hiddenItems": {
+      "yesterday:Create entry": false,
+      "yesterday:Toggle draft/complete": false,
       "switcher:Open quick switcher": false,
       "graph:Open graph view": false,
       "canvas:Create new canvas": false,
@@ -179,23 +181,27 @@
       "templater-obsidian:Templater": false
     }
   },
-  "active": "44920e09f37fc5a4",
+  "active": "cafdf77ac88619a8",
   "lastOpenFiles": [
+    "dump/LOG-2026-07-21.md",
     "brain/thoughts/2026-07-20.md",
+    "dump",
+    "docs/posts/example/assets/empty.png",
+    "docs/posts/example/assets/include_1.rs",
+    "docs/posts/example/index.mdx",
+    "docs/posts/authors.yml",
+    "docs/posts/example",
+    "docs/posts",
+    "/docs/posts/example/assets/empty.png",
+    "/docs/posts/example/index.mdx",
+    "/docs/posts/example/assets/include_1.rs",
+    "/docs/posts/authors.yml",
+    "/docs/posts/example/assets",
+    "/dump/LOG-2026-07-21.md",
     "brain/thoughts/README.md",
     "brain/thoughts/2026-07-19-16.md",
-    "docs/blog/example/index.mdx",
     "docs/blog/example/assets/empty.png",
-    "docs/blog/example/assets/include_1.rs",
-    "docs/blog/example/assets",
-    "docs/blog/example",
-    "/docs/blog/example/index.mdx",
-    "/docs/blog/example/assets/include_1.rs",
     "/docs/blog/example/assets/empty.png",
-    "/docs/blog/example/assets",
-    "/docs/blog/example",
-    "/docs/blog/example-post/assets",
-    "/docs/blog/example-post",
     "docs/static/assets/things/qamar.jpg",
     "docs/blog/example-post/assets/empty.png",
     "docs/things/thing1.md",
@@ -209,8 +215,6 @@
     "docs/notes/quantum/information/operations/assets/empty.png",
     "docs/notes/quantum/computing/hardware/assets/empty.png",
     "docs/notes/quantum/computing/search/assets/empty.png",
-    "docs/notes/quantum/information/correction/assets/empty.png",
-    "docs/notes/quantum/information/theory/assets/empty.png",
     "brain/thoughts/cosound_research.md",
     "brain/objectives/README.md",
     "brain/thoughts/cosound_origins.md",
