@@ -4,25 +4,11 @@
     "type": "split",
     "children": [
       {
-        "id": "eaf13e97e7de9acb",
+        "id": "ef9acc6532a3bfd9",
         "type": "tabs",
         "children": [
           {
-            "id": "05d910e66381df4e",
-            "type": "leaf",
-            "state": {
-              "type": "markdown",
-              "state": {
-                "file": "templates/DUMP.md",
-                "mode": "source",
-                "source": false
-              },
-              "icon": "lucide-file",
-              "title": "DUMP"
-            }
-          },
-          {
-            "id": "10009da6c7161f2d",
+            "id": "64ba15f4b0dbbc27",
             "type": "leaf",
             "state": {
               "type": "markdown",
@@ -35,8 +21,7 @@
               "title": "LOG-2026-07-21"
             }
           }
-        ],
-        "currentTab": 1
+        ]
       }
     ],
     "direction": "vertical"
@@ -199,53 +184,53 @@
       "yesterday:Toggle draft/complete": false
     }
   },
-  "active": "10009da6c7161f2d",
+  "active": "64ba15f4b0dbbc27",
   "lastOpenFiles": [
+    "manage/src",
+    "manage/src.example/docker/patches/apply_pr39018.py",
+    "manage/src.example/vllm_agent/agent.py",
+    "manage/src.example/vllm_agent/__init__.py",
+    "manage/src.example/scripts/enable_service_tools.sh",
+    "manage/src.example/scripts/serve_vllm.sh",
+    "manage/src.example/docker/setup-nvidia-container-toolkit.sh",
+    "manage/src.example/docker/patches",
+    "manage/src.example/docker/compose.yaml",
+    "manage/src.example/docker/Dockerfile",
+    "manage/src.example/vllm_agent",
+    "manage/src.example/README.md",
+    "manage/data/cosound/Cosound Learning Tutorial.md",
+    "manage/src/README.md",
+    "manage/data/cosound/sound_classification_ideas.md",
+    "manage/data/cosound/papers_missing.md",
+    "manage/data/cosound/freesounds_papers.md",
+    "manage/data/cosound/iso12913_to_sam.md",
+    "manage/data/cosound/freesounds_projects.md",
+    "manage/data/cosound/freesounds_datasets.md",
     "manage/data/README.md",
+    "manage/README.md",
     "templates/DUMP.md",
     "dump/LOG-2026-07-21.md",
-    "manage/README.md",
-    "manage/RE",
-    "manage/src",
+    "docs/posts/example/assets/empty.png",
+    "src/management/README.md",
+    "src/README.md",
+    "tmp/README.md",
+    "docs/blog/example-post/assets/empty.png",
+    "brain/knowledge/tertiary/README.md",
+    "brain/knowledge/secondary/README.md",
+    "brain/knowledge/primary/README.md",
+    "brain/knowledge/personal/README.md",
+    "brain/thoughts/README.md",
+    "brain/objectives/README.md",
+    "brain/actions/README.md",
+    "manage/plans/addpad.md",
+    "manage/plans/conways-graph.md",
     "docs/posts/ssc2026/assets/lane-violation.jpg",
     "docs/posts/ssc2026/assets/empty.png",
-    "docs/posts/example/assets/include_1.rs",
-    "docs/posts/example/assets/empty.png",
-    "docs/posts/ssc2026/index.mdx",
-    "docs/posts/ssc2026/assets",
-    "docs/posts/example/index.mdx",
-    "docs/posts/example/assets",
-    "docs/posts/ssc2026",
-    "docs/posts/example",
-    "docs/posts/authors.yml",
-    "manage/brain/Untitled.md",
-    "templates/PLAN.md",
-    "manage/brain/BEHAVIOR.md",
-    "brain/dump/LOG-2026-07-21.md",
-    "dump/LOG-2026-07-20.md",
-    "LOG-2026-12-21.md",
-    "Untitled.md",
-    "docs/dump/LOG-2026-07-20.md",
-    "brain/dump/LOG-2026-07-20.md",
-    "knowledge/tertiary/README.md",
-    "knowledge/secondary/README.md",
-    "knowledge/primary/README.md",
-    "knowledge/personal/README.md",
-    "brain/actions/2026-07-20.md",
-    "brain/thoughts/T-2026-07-20.md",
-    "brain/actions/README.md",
-    "brain/thoughts/TEMPLATE.md",
     "docs/blog/example/assets/empty.png",
-    "docs/things/thing3.md",
-    "docs/things/thing2.md",
-    "docs/things/thing1.md",
-    "README.md",
-    "manage/data/cosound/sound_classification_ideas.md",
     "docs/notes/quantum/information/measure/assets/empty.png",
     "docs/notes/quantum/information/operations/assets/empty.png",
     "docs/notes/quantum/information/theory/assets/empty.png",
     "docs/notes/quantum/information/entropy/assets/empty.png",
-    "docs/notes/quantum/computing/fourier/assets/empty.png",
-    "docs/notes/quantum/information/correction/assets/empty.png"
+    "docs/notes/quantum/computing/fourier/assets/empty.png"
   ]
 }

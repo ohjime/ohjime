@@ -31,6 +31,6 @@
         "**/docs/static/fonts": true,
         "Makefile": true,
         ".obsidian/": true,
-        "**/authors.yml": true,
+        "**/authors.yml": true
     }
 }

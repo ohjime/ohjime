@@ -71,15 +71,15 @@
       {
         "name": "",
         "active": true,
-        "type": "FILES",
-        "pattern": "manage/README.md",
+        "type": "DIRECTORIES",
+        "pattern": "manage/src",
         "patternType": "STRICT"
       },
       {
         "name": "",
         "active": true,
-        "type": "FILES",
-        "pattern": "manage/data/README.md",
+        "type": "DIRECTORIES",
+        "pattern": "manage/src.example",
         "patternType": "STRICT"
       }
     ],
