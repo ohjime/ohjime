@@ -1,0 +1,21 @@
+# Schedule for the ohjime dump summarizer — installed by deploy/install.sh
+#
+# Change the cadence by editing OnCalendar below (or use a drop-in:
+#   sudo systemctl edit ohjime-summarizer.timer
+# ) then:  sudo systemctl daemon-reload && sudo systemctl restart ohjime-summarizer.timer
+#
+# Inspect with:  systemctl list-timers ohjime-summarizer.timer
+
+[Unit]
+Description=Run the ohjime dump summarizer periodically
+
+[Timer]
+OnCalendar=hourly
+# Catch up after downtime (the box was off / asleep at the scheduled tick).
+Persistent=true
+# Avoid hammering git + the GPU exactly on the hour.
+RandomizedDelaySec=300
+Unit=ohjime-summarizer.service
+
+[Install]
+WantedBy=timers.target

@@ -30,26 +30,62 @@ If you later want more quality and can trade away context length, `Qwen3-14B-AWQ
 (~9.3 GB) is the practical ceiling on this card — leave the KV cache small
 (`--max-model-len 4096` or so). It is *not* as seamless; 8B-AWQ is the daily driver.
 
-## Prerequisites
+## Install on a fresh Ubuntu machine
 
-- [`uv`](https://docs.astral.sh/uv/).
-- A running vLLM OpenAI server on port 8000 serving `Qwen/Qwen3-8B-AWQ`. On the
-  Ubuntu box the `vllm.service` systemd unit already does this. Verify:
+The repo bootstraps itself. On any Ubuntu box with an NVIDIA GPU and driver:
 
-  ```bash
-  curl http://localhost:8000/v1/models
-  ```
+```bash
+git clone <this-repo> ohjime
+cd ohjime/manage/src
+sudo ./deploy/install.sh
+```
 
-  Summarization is plain text-in/text-out, so the server does **not** need any
-  tool-calling flags — a bare `vllm serve Qwen/Qwen3-8B-AWQ` is enough.
+That is the whole setup. It is idempotent — re-run it any time. It installs:
 
-## Setup
+| Thing | Where |
+| --- | --- |
+| `uv` (if missing) | `~/.local/bin/uv` |
+| vLLM venv, **Python 3.12**, `vllm==0.25.0` | `~/.local/share/ohjime/vllm` |
+| Summarizer deps (`uv sync`) | `manage/src/.venv` |
+| Model server config | `/etc/ohjime/vllm.env` |
+| `ohjime-vllm.service` | serves Qwen3-8B-AWQ on :8000 |
+| `ohjime-summarizer.service` + `.timer` | hourly summarize run |
+
+Two pins matter and are deliberate:
+
+- **Python 3.12**, not the system Python. Ubuntu 26.04 ships Python 3.14, which
+  vLLM has no wheels for. `uv` fetches 3.12 automatically.
+- **`vllm==0.25.0`**, proven working with Qwen3-8B-AWQ on Turing (SM 7.5).
+
+The installer also runs preflight checks (NVIDIA driver present, GPU compute
+capability, free disk) and disables any pre-existing hand-rolled `vllm.service`,
+which would otherwise fight it for port 8000 and the GPU.
+
+Flags: `--no-timer` (install without the hourly schedule), `--no-start`
+(don't start the model server), `--vllm-venv DIR` (custom venv location).
+Remove everything with `sudo ./deploy/uninstall.sh [--purge]`.
+
+### Managing it
+
+```bash
+systemctl status ohjime-vllm              # model server
+sudo systemctl start ohjime-summarizer    # summarize now
+journalctl -u ohjime-summarizer -f        # watch a run
+systemctl list-timers ohjime-summarizer.timer
+```
+
+### Manual setup (no systemd)
 
 ```bash
 cd manage/src
-cp .env.example .env      # defaults already match the local vLLM server
-uv sync                   # create .venv and install google-adk + litellm
+cp .env.example .env
+uv sync
+# and serve the model yourself:
+vllm serve Qwen/Qwen3-8B-AWQ --dtype float16 --enforce-eager --max-model-len 16384
 ```
+
+Summarization is plain text-in/text-out, so the server needs **no** tool-calling
+flags. Verify any server with `curl http://localhost:8000/v1/models`.
 
 ## Run
 
@@ -111,12 +147,19 @@ Example of what gets inserted:
 manage/src/
 ├── pyproject.toml          # uv project + deps (google-adk, litellm)
 ├── .env.example            # copy to .env
-├── summarize.py            # entrypoint: read latest dump → summarize → inject
+├── summarize.py            # entrypoint: git pull → read latest dump → summarize → inject
 ├── dump_ops.py             # pure text ops (find/split/inject); no ADK deps
 ├── check_vllm.py           # stdlib-only endpoint diagnostics
+├── deploy/                 # self-contained systemd install (fresh Ubuntu box)
+│   ├── install.sh              # idempotent installer  (sudo ./deploy/install.sh)
+│   ├── uninstall.sh            # clean removal
+│   ├── vllm.env.example        # → /etc/ohjime/vllm.env
+│   ├── ohjime-vllm.service     # model server unit template
+│   ├── ohjime-summarizer.service   # one-shot summarize run
+│   └── ohjime-summarizer.timer     # hourly schedule
 ├── scripts/
-│   ├── serve_vllm.sh           # launch vLLM (with tool flags, if you add tools)
-│   └── enable_service_tools.sh # durably enable tool flags on the systemd unit
+│   ├── serve_vllm.sh           # ad-hoc foreground vLLM (with tool flags)
+│   └── enable_service_tools.sh # legacy: tool flags on a hand-rolled vllm.service
 └── vllm_agent/             # ADK agent package (discovered by `adk web`/`adk run`)
     ├── __init__.py
     └── agent.py            # root_agent = summarizer LlmAgent(model=LiteLlm(...))

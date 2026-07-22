@@ -1,0 +1,40 @@
+# ohjime vLLM model server — installed by deploy/install.sh
+#
+# This is a template: the double-at placeholders below are substituted at
+# install time. Do not edit the installed copy in /etc/systemd/system directly.
+# Configuration lives in /etc/ohjime/vllm.env; after editing it run:
+#   sudo systemctl restart ohjime-vllm
+
+[Unit]
+Description=ohjime vLLM OpenAI-compatible server (Qwen3-8B-AWQ)
+Documentation=https://docs.vllm.ai
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@@USER@@
+Group=@@GROUP@@
+
+# All tunables live here (model, port, context length, GPU fraction).
+EnvironmentFile=/etc/ohjime/vllm.env
+# Keep the HF weight cache in the service user's home so it is shared with
+# any manual `vllm serve` runs and survives reinstalls.
+Environment=HF_HOME=@@HOME@@/.cache/huggingface
+
+ExecStart=@@VLLM_BIN@@ serve ${VLLM_MODEL} \
+    --host ${VLLM_HOST} \
+    --port ${VLLM_PORT} \
+    --max-model-len ${VLLM_MAX_LEN} \
+    --gpu-memory-utilization ${VLLM_GPU_UTIL} \
+    $VLLM_EXTRA
+
+Restart=on-failure
+RestartSec=10
+# First boot may download ~5.5 GB of weights before the server binds.
+TimeoutStartSec=1800
+KillMode=mixed
+KillSignal=SIGINT
+
+[Install]
+WantedBy=multi-user.target

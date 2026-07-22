@@ -1,0 +1,24 @@
+# ohjime dump summarizer (one-shot) — installed by deploy/install.sh
+#
+# Run manually with:  sudo systemctl start ohjime-summarizer
+# Follow output with: journalctl -u ohjime-summarizer -f
+
+[Unit]
+Description=Summarize the latest ohjime dump
+# The model server must be up; if it is not, this run simply fails and the
+# timer retries on the next tick.
+After=ohjime-vllm.service network-online.target
+Wants=ohjime-vllm.service
+
+[Service]
+Type=oneshot
+User=@@USER@@
+Group=@@GROUP@@
+WorkingDirectory=@@SRC_DIR@@
+Environment=HOME=@@HOME@@
+Environment=PATH=@@HOME@@/.local/bin:/usr/local/bin:/usr/bin:/bin
+
+# summarize.py runs `git pull --ff-only` itself before reading the dump.
+ExecStart=@@UV_BIN@@ run summarize.py
+
+TimeoutStartSec=900
