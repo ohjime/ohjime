@@ -74,13 +74,6 @@
         "type": "DIRECTORIES",
         "pattern": "manage/src",
         "patternType": "STRICT"
-      },
-      {
-        "name": "",
-        "active": true,
-        "type": "DIRECTORIES",
-        "pattern": "manage/src.example",
-        "patternType": "STRICT"
       }
     ],
     "frontMatter": [
