@@ -97,6 +97,13 @@ uv run summarize.py --no-pull       # don't git pull first
 uv run summarize.py --file ../../dump/LOG-2026-07-21.md   # a specific dump
 ```
 
+Or from the repo root, via the Makefile:
+
+```bash
+make daily-summary                  # summarize and write
+make daily-summary ARGS=--dry-run   # preview, write nothing
+```
+
 What it does:
 
 1. Runs `git pull --ff-only` in the repo first (dumps arrive via Obsidian's git
