@@ -13,6 +13,20 @@
             "state": {
               "type": "markdown",
               "state": {
+                "file": "manage/tmp/Untitled.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Untitled"
+            }
+          },
+          {
+            "id": "0a321fcdaf1982fc",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
                 "file": "dump/LOG-2026-07-21.md",
                 "mode": "source",
                 "source": false
@@ -21,7 +35,8 @@
               "title": "LOG-2026-07-21"
             }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -181,28 +196,32 @@
       "templater-obsidian:Templater": false
     }
   },
-  "active": "cb959337f697ab3a",
+  "active": "0a321fcdaf1982fc",
   "lastOpenFiles": [
-    "templates/DUMP.md",
+    "manage/src/scripts/serve_vllm.sh",
+    "manage/src/scripts/enable_service_tools.sh",
+    "manage/src/deploy/ohjime-vllm.service",
+    "manage/src/deploy/vllm.env.example",
+    "manage/src/deploy/ohjime-summarizer.timer",
+    "manage/src/deploy/ohjime-summarizer.service",
+    "manage/src/deploy/install.sh",
+    "manage/src/deploy/uninstall.sh",
+    "manage/src/vllm_agent/agent.py",
+    "manage/src/vllm_agent/__init__.py",
+    "manage/src/dump_ops.py",
+    "manage/src/README.md",
+    "/manage/src/README.md",
+    "manage/tmp/Untitled.md",
     "dump/LOG-2026-07-21.md",
-    "manage/README.md",
-    "manage",
     "/templates/DUMP.md",
-    "/templates",
-    "/manage/README.md",
-    "/manage",
-    "docs/posts/example/index.mdx",
-    "templates",
-    "docs/things/thing1.md",
-    "docs/notes/quantum-computing/index.mdx",
-    "brain/thoughts/2026-07-20.md",
-    "dump",
-    "docs/posts/example/assets/empty.png",
-    "docs/posts/example/assets/include_1.rs",
-    "docs/posts/authors.yml",
-    "docs/posts/example",
-    "/docs/posts/example/assets/empty.png",
     "/dump/LOG-2026-07-21.md",
+    "templates/DUMP.md",
+    "manage/README.md",
+    "/manage/README.md",
+    "docs/things/thing1.md",
+    "brain/thoughts/2026-07-20.md",
+    "docs/posts/example/assets/empty.png",
+    "/docs/posts/example/assets/empty.png",
     "brain/thoughts/README.md",
     "brain/thoughts/2026-07-19-16.md",
     "docs/blog/example/assets/empty.png",
