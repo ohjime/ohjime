@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+*.egg-info/
+
+# Environment / secrets
+.env
+
+# uv
+uv.lock.bak
+
+# ruff
+.ruff_cache/
+
+# Editor / OS
+.vscode/
+.DS_Store
