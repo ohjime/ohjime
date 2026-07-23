@@ -107,6 +107,67 @@ def inject_summary(text: str, summary: str, tags: list[str] | None = None) -> st
     return result + "\n"
 
 
+# Recognizes a front-matter block only when the file's very first
+# characters are "---" — a "---" later in the body (e.g. a markdown
+# horizontal rule, which dump logs never have but other notes might) is
+# never mistaken for one.
+_FRONT_MATTER_RE = re.compile(r"\A---\r?\n(.*?)\r?\n---[ \t]*\r?\n?", re.DOTALL)
+
+LOCK_FRONT_MATTER = {"obsidianUIMode": "preview"}
+
+
+def _set_front_matter_field(block: str, key: str, value: str) -> str:
+    """Set ``key: value`` on its own line inside a front-matter body.
+
+    Edits the existing ``key:`` line in place if present (matched only at
+    the start of a line, so nothing else in the block is touched); appends
+    a new line otherwise. Every other line — lists, nested maps, comments,
+    ordering — passes through untouched, since we never parse the block
+    into a dict and re-render it.
+    """
+    pattern = re.compile(rf"^{re.escape(key)}:.*$", re.MULTILINE)
+    line = f"{key}: {value}"
+    if pattern.search(block):
+        return pattern.sub(line, block, count=1)
+    block = block.rstrip("\n")
+    return f"{block}\n{line}" if block else line
+
+
+def set_front_matter(text: str, updates: dict[str, str]) -> str:
+    """Merge ``updates`` into ``text``'s front matter, touching nothing else.
+
+    If ``text`` already starts with a ``---``-delimited block, only the
+    named keys are edited (or appended) within it; the rest of the block
+    and the entire body are passed through byte-for-byte. If there is no
+    front-matter block, one is created at the top of the file and the body
+    — dump logs included — is left exactly as it was.
+    """
+    match = _FRONT_MATTER_RE.match(text)
+    block, body = (match.group(1), text[match.end():]) if match else ("", text)
+
+    for key, value in updates.items():
+        block = _set_front_matter_field(block, key, value)
+
+    return f"---\n{block}\n---\n{body}"
+
+
+def lock_note_text(text: str) -> str:
+    """Return ``text`` with front matter set to force Obsidian preview mode."""
+    return set_front_matter(text, LOCK_FRONT_MATTER)
+
+
+def lock_note(path: Path) -> Path:
+    """Lock the note at ``path`` so Obsidian always opens it in preview mode.
+
+    Reads the file, merges the lock keys into its front matter (creating
+    the block if the note doesn't have one yet), and writes it back in
+    place. Idempotent — re-locking an already-locked note is a no-op write.
+    """
+    path = Path(path)
+    path.write_text(lock_note_text(path.read_text()))
+    return path
+
+
 def _normalize_tags(tags: list[str]) -> list[str]:
     """Make model-supplied tags Obsidian-safe and de-duplicated."""
     seen: list[str] = []

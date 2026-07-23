@@ -7,7 +7,9 @@
 
 The summary (an Obsidian `[!summary]` callout with tags) is placed directly
 below the centered title/date block and above the first note. Re-running
-refreshes the block in place instead of duplicating it.
+refreshes the block in place instead of duplicating it. Once written, the
+dump is locked (front matter `obsidianUIMode: preview`) so it always opens
+in reading mode instead of editable live-preview.
 
 Path: the ADK agent talks to the local vLLM server (Qwen/Qwen3-8B-AWQ) through
 LiteLLM. Summarization needs no tool-calling, so the server does NOT need the
@@ -69,6 +71,62 @@ def git_pull(from_dir: Path) -> None:
         print(f"{DIM}{out or 'Already up to date.'}{RESET}")
     else:
         print(f"{DIM}git pull failed (continuing with local files):\n{out}{RESET}", file=sys.stderr)
+
+
+def git_push_commit(path: Path, message: str) -> bool:
+    """Commit ``path`` alone and push it straight to ``main`` on the remote.
+
+    Stages and commits only this file — restricted with a trailing
+    pathspec, so anything else already staged in the repo (e.g. unrelated
+    work in progress) is left untouched and never swept into this commit.
+    Non-fatal like git_pull: a missing remote, offline box, no changes to
+    commit, or a rejected push prints a warning and returns False rather
+    than raising, since the summary/lock already succeeded on disk either way.
+    """
+    try:
+        toplevel = subprocess.run(
+            ["git", "-C", str(path.parent), "rev-parse", "--show-toplevel"],
+            capture_output=True, text=True, check=True,
+        ).stdout.strip()
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        print(f"{DIM}git: {path} is not in a git repo — skipping commit/push{RESET}")
+        return False
+
+    rel = os.path.relpath(path, toplevel)
+
+    add = subprocess.run(
+        ["git", "-C", toplevel, "add", "--", rel],
+        capture_output=True, text=True,
+    )
+    if add.returncode != 0:
+        print(f"{DIM}git add failed:\n{(add.stdout + add.stderr).strip()}{RESET}", file=sys.stderr)
+        return False
+
+    staged = subprocess.run(["git", "-C", toplevel, "diff", "--cached", "--quiet", "--", rel])
+    if staged.returncode == 0:
+        print(f"{DIM}git: no changes to commit for {rel}{RESET}")
+        return False
+
+    commit = subprocess.run(
+        ["git", "-C", toplevel, "commit", "-m", message, "--", rel],
+        capture_output=True, text=True,
+    )
+    if commit.returncode != 0:
+        print(f"{DIM}git commit failed:\n{(commit.stdout + commit.stderr).strip()}{RESET}", file=sys.stderr)
+        return False
+    print(f"{DIM}{commit.stdout.strip()}{RESET}")
+
+    print(f"{DIM}git push → origin main …{RESET}")
+    push = subprocess.run(
+        ["git", "-C", toplevel, "push", "origin", "HEAD:main"],
+        capture_output=True, text=True,
+    )
+    out = (push.stdout + push.stderr).strip()
+    if push.returncode != 0:
+        print(f"{DIM}git push failed:\n{out}{RESET}", file=sys.stderr)
+        return False
+    print(f"{DIM}{out or 'Pushed to main.'}{RESET}")
+    return True
 
 
 async def run_summary(notes: str) -> str:
@@ -133,6 +191,11 @@ async def main() -> int:
         action="store_true",
         help="Skip the `git pull` that runs before reading the latest dump.",
     )
+    parser.add_argument(
+        "--no-push",
+        action="store_true",
+        help="Skip the `git commit`/`push` that runs after writing the summary.",
+    )
     args = parser.parse_args()
 
     if not args.no_pull:
@@ -174,6 +237,13 @@ async def main() -> int:
     updated = dump_ops.inject_summary(text, summary, tags)
     target.write_text(updated)
     print(f"\n{GREEN}✓ wrote summary into {target}{RESET}")
+
+    dump_ops.lock_note(target)
+    print(f"{GREEN}✓ locked {target.name} to preview mode{RESET}")
+
+    if not args.no_push:
+        if git_push_commit(target, f"Summarize dump: {target.name}"):
+            print(f"{GREEN}✓ committed and pushed {target.name} to main{RESET}")
     return 0
 
 
