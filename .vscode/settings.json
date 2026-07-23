@@ -9,7 +9,6 @@
         "**/Flutter/ephemeral": true,
         "**/.symlinks": true,
         "**/.plugin_symlinks": true,
-        "**/build": true,
         "**/.docusaurus": true,
         "**/node_modules": true,
         "**/.gitignore": true,
