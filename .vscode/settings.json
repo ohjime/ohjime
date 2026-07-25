@@ -30,6 +30,10 @@
         "**/docs/static/fonts": true,
         "Makefile": true,
         ".obsidian/": true,
-        "**/authors.yml": true
+        "dump/": true,
+        "templates/": true,
+        "**/authors.yml": true,
+        // "projects/" : true,
+
     }
 }

@@ -1,8 +1,8 @@
 {
   "showRibbon": false,
-  "translucency": true,
+  "translucency": false,
   "enabledCssSnippets": [
     "ant"
   ],
-  "cssTheme": "AnuPpuccin"
+  "cssTheme": "Wasp"
 }
