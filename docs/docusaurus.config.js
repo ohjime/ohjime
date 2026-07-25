@@ -5,6 +5,8 @@ const lightCodeTheme = require('prism-react-renderer').themes.vsLight;
 const darkCodeTheme = require('prism-react-renderer').themes.vsDark;
 const tailwindPlugin = require('./src/plugins/tailwind-config.cjs');
 const rustLivePlugin = require('./src/remark/rust-live');
+const dartLivePlugin = require('./src/remark/dart-live');
+const flutterLivePlugin = require('./src/remark/flutter-live');
 
 /** @type {() => Promise<import('@docusaurus/types').Config>} */
 module.exports = async function createConfigAsync() {
@@ -56,7 +58,7 @@ module.exports = async function createConfigAsync() {
           path: 'posts',
           showReadingTime: true,
           editUrl: 'https://github.com/ohjime/portfolio/tree/main/docs/',
-          remarkPlugins: [remarkMath, rustLivePlugin],
+          remarkPlugins: [remarkMath, rustLivePlugin, dartLivePlugin, flutterLivePlugin],
           rehypePlugins: [rehypeKatex],
         },
       ],
@@ -89,7 +91,7 @@ module.exports = async function createConfigAsync() {
           },
           blogListComponent: '@site/src/theme/concepts/BlogListPage',
           blogPostComponent: '@site/src/theme/concepts/BlogPostPage',
-          remarkPlugins: [remarkMath, rustLivePlugin],
+          remarkPlugins: [remarkMath, rustLivePlugin, dartLivePlugin, flutterLivePlugin],
           rehypePlugins: [rehypeKatex],
         },
       ],
@@ -108,7 +110,7 @@ module.exports = async function createConfigAsync() {
             breadcrumbs: true,
             admonitions: true,
             showLastUpdateTime: true,
-            remarkPlugins: [remarkMath, rustLivePlugin],
+            remarkPlugins: [remarkMath, rustLivePlugin, dartLivePlugin, flutterLivePlugin],
             rehypePlugins: [rehypeKatex],
           },
           blog: false, // Disabled because we're using separate blog plugins

@@ -1,16 +1,24 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { Highlight, themes } from 'prism-react-renderer';
-import { useColorMode } from '@docusaurus/theme-common';
+import React, { useState, useCallback, useEffect } from 'react';
 import styles from './RustLive.module.css';
+import LiveCodeEditor from './LiveCodeEditor';
 
 interface RustLiveProps {
   code: string;
+
+  /** Contents of the `file=…` include, prepended to the demo on every run. */
   hiddenCode?: string;
+
+  /** Basename of that include, shown as the base tab's tooltip. */
+  hiddenFile?: string;
 }
 
 const API_URL = 'https://play.rust-lang.org/execute';
 
-export default function RustLive({ code: initialCode, hiddenCode }: RustLiveProps) {
+export default function RustLive({
+  code: initialCode,
+  hiddenCode,
+  hiddenFile,
+}: RustLiveProps) {
   // Parse existing code to find hidden lines at start (header) and end (footer)
   // Pattern: lines starting with "# " are hidden.
   // We only support hidden lines at the top and bottom to avoid complex interleaving logic during edits.
@@ -40,30 +48,19 @@ export default function RustLive({ code: initialCode, hiddenCode }: RustLiveProp
 
     return bodyLines.join('\n');
   });
+  // The include is editable too, so it lives in state rather than being read
+  // straight off the prop at run time.
+  const [includedCode, setIncludedCode] = useState(hiddenCode ?? '');
+  const hasIncludedTab = (hiddenCode ?? '').trim().length > 0;
+
   const [edition, setEdition] = useState<'2021' | '2024'>('2021');
   const [output, setOutput] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
   const [running, setRunning] = useState(false);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const preRef = useRef<HTMLPreElement>(null);
-  const { colorMode } = useColorMode();
 
-  // Sync textarea scroll with the highlighted pre
-  const handleScroll = useCallback(() => {
-    if (textareaRef.current && preRef.current) {
-      preRef.current.scrollTop = textareaRef.current.scrollTop;
-      preRef.current.scrollLeft = textareaRef.current.scrollLeft;
-    }
-  }, []);
-
-  // Auto-resize textarea height to match content
   useEffect(() => {
-    const ta = textareaRef.current;
-    if (ta) {
-      ta.style.height = 'auto';
-      ta.style.height = `${ta.scrollHeight}px`;
-    }
-  }, [code]);
+    setIncludedCode(hiddenCode ?? '');
+  }, [hiddenCode]);
 
   const runCode = useCallback(async () => {
     setRunning(true);
@@ -75,7 +72,8 @@ export default function RustLive({ code: initialCode, hiddenCode }: RustLiveProp
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          code: (hiddenCode ? hiddenCode + '\n' : '') + header + code + footer,
+          code:
+            (includedCode ? includedCode + '\n' : '') + header + code + footer,
           channel: 'stable',
           mode: 'debug',
           edition,
@@ -102,34 +100,7 @@ export default function RustLive({ code: initialCode, hiddenCode }: RustLiveProp
     } finally {
       setRunning(false);
     }
-  }, [code, edition]);
-
-  const handleKeyDown = useCallback(
-    (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-      // Ctrl/Cmd + Enter to run
-      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        runCode();
-        return;
-      }
-      // Tab inserts 4 spaces
-      if (e.key === 'Tab') {
-        e.preventDefault();
-        const ta = e.currentTarget;
-        const start = ta.selectionStart;
-        const end = ta.selectionEnd;
-        const spaces = '    ';
-        setCode((prev) => prev.substring(0, start) + spaces + prev.substring(end));
-        // Restore cursor position after React re-render
-        requestAnimationFrame(() => {
-          ta.selectionStart = ta.selectionEnd = start + spaces.length;
-        });
-      }
-    },
-    [runCode],
-  );
-
-  const theme = colorMode === 'dark' ? themes.vsDark : themes.vsLight;
+  }, [code, includedCode, header, footer, edition]);
 
   return (
     <div className={styles.container}>
@@ -164,33 +135,18 @@ export default function RustLive({ code: initialCode, hiddenCode }: RustLiveProp
       </div>
 
       {/* ── Editor ── */}
-      <div className={styles.editorWrapper}>
-        <Highlight theme={theme} code={code} language="rust">
-          {({ className, style, tokens, getLineProps, getTokenProps }) => (
-            <pre ref={preRef} className={`${className} ${styles.pre}`} style={{ ...style, background: 'transparent' }}>
-              {tokens.map((line, i) => (
-                <div key={i} {...getLineProps({ line })}>
-                  {line.map((token, key) => (
-                    <span key={key} {...getTokenProps({ token })} />
-                  ))}
-                </div>
-              ))}
-            </pre>
-          )}
-        </Highlight>
-        <textarea
-          ref={textareaRef}
-          className={styles.textarea}
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          onScroll={handleScroll}
-          onKeyDown={handleKeyDown}
-          spellCheck={false}
-          autoCapitalize="off"
-          autoCorrect="off"
-          aria-label="Rust code editor"
-        />
-      </div>
+      <LiveCodeEditor
+        language="rust"
+        languageLabel="Rust"
+        demo={code}
+        onDemoChange={setCode}
+        base={includedCode}
+        onBaseChange={setIncludedCode}
+        hasBase={hasIncludedTab}
+        baseFile={hiddenFile}
+        indent="    "
+        onRun={runCode}
+      />
 
       {/* ── Output ── */}
       {output !== null && (

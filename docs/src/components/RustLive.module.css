@@ -1,5 +1,20 @@
+/*
+ * Shared chrome for the live code components: RustLive, DartLive and
+ * FlutterLive all import this module. Anything genuinely specific to one of
+ * them (FlutterLive's app preview) lives in its own module alongside.
+ */
+
 /* ── Container ── */
 .container {
+  /*
+   * ── Tunable ──
+   *
+   * Visible height of the editor. Anything taller scrolls inside it.
+   * Override globally in src/css/custom.css, or per instance from a page:
+   *   <div style={{ '--live-code-height': '260px' }}>
+   */
+  --live-code-height: 420px;
+
   margin-bottom: 1.25rem;
   border: 1px solid var(--ifm-color-emphasis-300);
   border-radius: 8px;
@@ -72,20 +87,85 @@
   cursor: not-allowed;
 }
 
-/* ── Editor area ── */
+/* ── Tab strip ── */
+.tabBar {
+  display: flex;
+  align-items: stretch;
+  padding: 0 0.35rem;
+  border-bottom: 1px solid var(--ifm-color-emphasis-200);
+  background: var(--ifm-background-surface-color);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.tabBar::-webkit-scrollbar {
+  display: none;
+}
+
+.tab {
+  appearance: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  background: transparent;
+  padding: 0.18rem 0.6rem;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.68rem;
+  line-height: 1.45;
+  color: var(--ifm-color-emphasis-600);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tab:hover {
+  color: var(--ifm-color-content);
+}
+
+.tabActive {
+  color: var(--ifm-color-content);
+  border-bottom-color: var(--ifm-color-primary);
+}
+
+/*
+ * ── Editor area ──
+ *
+ * Scrolling lives on .editorScroll, never on the <pre> or the <textarea>.
+ *
+ * .editorWrapper is shrink-to-fit (inline-block) so it grows to the longest
+ * line, and the textarea is stretched over the whole of it. Both layers
+ * therefore scroll as one, which is what keeps the caret sitting exactly on
+ * the highlighted glyph. Scrolling the textarea independently and mirroring
+ * scrollLeft onto the <pre> cannot work here: the <pre> is overflow-visible
+ * and so has nothing to scroll.
+ */
+.editorScroll {
+  max-height: var(--live-code-height);
+  overflow: auto;
+  background: var(--code-block-background);
+}
+
 .editorWrapper {
   position: relative;
-  overflow: auto;
+  display: inline-block;
+  min-width: 100%;
+  vertical-align: top;
 }
 
 /* Shared typography and layout for perfect alignment */
 .pre,
 .textarea {
-  /* Typography */
+  /* Typography — must match exactly between the two layers */
   font-family: var(--ifm-font-family-monospace) !important;
   font-size: 0.875rem !important;
+  font-weight: 400 !important;
   line-height: 1.5 !important;
+  letter-spacing: normal !important;
+  font-variant-ligatures: none !important;
   white-space: pre !important;
+  word-break: normal !important;
+  overflow-wrap: normal !important;
+  text-align: left !important;
 
   /* Layout */
   margin: 0 !important;
@@ -96,20 +176,28 @@
 }
 
 .pre {
+  position: relative;
+  /* Ensure we override Prism themes */
+  display: block;
   /* Ensure it doesn't collapse */
   min-height: 3.5rem;
   overflow: visible !important;
   border-radius: 0 !important;
-  /* Ensure we override Prism themes */
-  display: block;
+  background: transparent !important;
+  pointer-events: none;
 }
 
 .textarea {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
   outline: none;
   resize: none;
-  overflow: auto;
+  /* The viewport is .editorScroll; this layer must never scroll on its own */
+  overflow: hidden;
   background: transparent;
   color: transparent !important;
   caret-color: var(--ifm-color-content);

@@ -1,0 +1,85 @@
+/*
+ * Flutter-only additions.
+ *
+ * The chrome shared with RustLive/DartLive (container, toolbar, tab strip,
+ * editor, run button, spinner, console panel) comes from RustLive.module.css.
+ * Only the app preview, which the other two have no equivalent of, lives here.
+ */
+
+/*
+ * ── Tunable ──
+ *
+ * Height of the running Flutter app. The editor's own height knob is
+ * --live-code-height, in RustLive.module.css.
+ *
+ * Override globally in src/css/custom.css, or per instance from a page:
+ *   <div style={{ '--live-preview-height': '320px' }}>
+ */
+.root {
+  --live-preview-height: 520px;
+}
+
+.version {
+  font-size: 0.7rem;
+  color: var(--ifm-color-emphasis-600);
+  user-select: none;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.7rem;
+  color: var(--ifm-color-emphasis-600);
+  user-select: none;
+}
+
+/* Sits on the toolbar rather than on the primary button, so it needs the
+   surface foreground colour instead of white. */
+.statusSpinner {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border: 2px solid var(--ifm-color-emphasis-300);
+  border-top-color: var(--ifm-color-emphasis-600);
+  border-radius: 50%;
+  animation: statusSpin 0.6s linear infinite;
+}
+
+@keyframes statusSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Preview ── */
+.previewStage {
+  position: relative;
+  width: 100%;
+  height: var(--live-preview-height);
+  overflow: hidden;
+  background: var(--ifm-background-color);
+}
+
+.previewFrame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  background: transparent;
+}
+
+.previewOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--ifm-color-emphasis-600);
+  background: var(--ifm-background-color);
+  pointer-events: none;
+}

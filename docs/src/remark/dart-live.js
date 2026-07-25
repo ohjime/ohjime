@@ -6,9 +6,9 @@ const path = require('path');
 const plugin = (options) => {
   const transformer = (ast, vfile) => {
     visit(ast, 'code', (node) => {
-      // Check if the code block is 'rust' and has the 'live' meta tag
-      // Meta can be complex like 'live file=./foo.rs'
-      if (node.lang === 'rust' && (node.meta === 'live' || (node.meta && node.meta.startsWith('live ')))) {
+      // Check if the code block is 'dart' and has the 'live' meta tag
+      // Meta can be complex like 'live file=./foo.dart'
+      if (node.lang === 'dart' && (node.meta === 'live' || (node.meta && node.meta.startsWith('live ')))) {
         let hiddenCode = '';
         // Labels the include's tab in the editor.
         let hiddenFile = '';
@@ -25,13 +25,13 @@ const plugin = (options) => {
             hiddenCode = fs.readFileSync(absolutePath, 'utf8');
             hiddenFile = path.basename(absolutePath);
           } catch (err) {
-            console.error(`[RustLive] Failed to read file: ${absolutePath}`, err);
+            console.error(`[DartLive] Failed to read file: ${absolutePath}`, err);
           }
         }
 
         // Transform into an mdxJsxFlowElement (MDX v3 / Docusaurus v3)
         node.type = 'mdxJsxFlowElement';
-        node.name = 'RustLive';
+        node.name = 'DartLive';
         node.attributes = [
           {
             type: 'mdxJsxAttribute',
