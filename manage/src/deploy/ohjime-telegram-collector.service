@@ -1,0 +1,32 @@
+# ohjime Telegram collector — installed by deploy/install.sh
+#
+# The collector long-polls Telegram continuously and stores authorized messages
+# in SQLite. Follow it with: journalctl -u ohjime-telegram-collector -f
+
+[Unit]
+Description=Collect Telegram thoughts and actions for ohjime
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=@@USER@@
+Group=@@GROUP@@
+WorkingDirectory="@@SRC_DIR@@"
+Environment="HOME=@@HOME@@"
+Environment=PYTHONUNBUFFERED=1
+EnvironmentFile=/etc/ohjime/telegram.env
+
+ExecStart="@@SRC_DIR@@/.venv/bin/python" "@@SRC_DIR@@/telegram_collector.py"
+
+Restart=always
+RestartSec=5
+# Configuration failures use exit status 2 and need an operator edit, not a
+# noisy restart loop. The installer restarts the unit after config changes.
+RestartPreventExitStatus=2
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

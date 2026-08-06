@@ -1,38 +1,60 @@
-# dump-summarizer — auto-summarize dumps with a local vLLM agent
+# telegram-dump-summarizer
 
-A [Google ADK](https://adk.dev) agent that reads the newest note in
-[`dump/`](../../dump) and writes a short summary (plus Obsidian tags) into the
-file — placed right below the centered title/date block and above the first
-note. The LLM is a **local, self-hosted vLLM** server reached through
-[LiteLLM](https://docs.litellm.ai/docs/tutorials/google_adk).
+A private Telegram bot inbox for thoughts and actions, backed by SQLite and
+summarized once a day by a local Google ADK/vLLM agent.
 
+```text
+Telegram client
+    │  t: a thought     a: an action
+    ▼
+private bot chat
+    │  continuous Bot API long polling
+    ▼
+telegram_collector.py ──► /var/lib/ohjime/messages.db
+                                  │
+                                  │  10:00 PM America/Edmonton
+                                  ▼
+                            summarize.py
+                                  │
+                                  ▼
+                    ADK → LiteLLM → local vLLM
 ```
-summarize.py
-  └── ADK Runner  →  LlmAgent  →  LiteLlm("hosted_vllm/<model>", api_base=…/v1)
-                                    └── vLLM OpenAI server (http://localhost:8000/v1)
-                                          └── Qwen/Qwen3-8B-AWQ
+
+Collection is continuous because Telegram does not expose arbitrary bot-chat
+history and queued updates are not a durable archive. Processing is separate:
+the systemd timer wakes the summarizer at 10:00 PM and the collector keeps
+accepting messages while it runs.
+
+## Message format
+
+Send messages directly to the private bot using any of these forms:
+
+```text
+t: Maybe this design should use SQLite
+thought: Maybe this design should use SQLite
+/thought Maybe this design should use SQLite
+
+a: Implement the Telegram collector
+action: Implement the Telegram collector
+/action Implement the Telegram collector
 ```
 
-## The model: Qwen3-8B-AWQ on the RTX 2080 Ti
+`/t` and `/a`, including commands addressed as `/t@YourBot`, work too. Prefixes
+are removed before text reaches the agent.
 
-The default is **`Qwen/Qwen3-8B-AWQ`** — the seamless pick for the 11 GB
-2080 Ti (Turing, SM 7.5), and the model your `vllm.service` already serves:
+Private-chat topic IDs are optional. If `THOUGHT_THREAD_ID` and
+`ACTION_THREAD_ID` are configured, the topic decides the type and a prefix is
+not required. Topic classification takes precedence over a conflicting prefix.
+Messages without a recognized prefix or topic are retained as `unknown`, so
+they are not lost.
 
-- **Fits comfortably.** AWQ 4-bit weights are ~5.5 GB, leaving ample room for a
-  16K KV cache in 11 GB.
-- **No exotic kernels.** Marlin/Machete need SM ≥ 8.0; on SM 7.5 vLLM falls back
-  to the standard AWQ GEMM path — slower than Ampere, but it just works.
-- **No Turing patching.** Unlike Gemma 4 (whose head_size 512 exceeds Turing's
-  64 KB shared-memory cap and needs an unmerged upstream fix), Qwen3-8B runs on
-  stock vLLM. That whole Docker/patch setup has been removed.
+Only the configured numeric user ID in the configured numeric chat ID is
+stored. Usernames are intentionally not used because they can change.
 
-If you later want more quality and can trade away context length, `Qwen3-14B-AWQ`
-(~9.3 GB) is the practical ceiling on this card — leave the KV cache small
-(`--max-model-len 4096` or so). It is *not* as seamless; 8B-AWQ is the daily driver.
+## Ubuntu installation
 
-## Install on a fresh Ubuntu machine
-
-The repo bootstraps itself. On any Ubuntu box with an NVIDIA GPU and driver:
+The installer uses the existing Ubuntu/systemd stack and runs services as the
+normal user who invokes `sudo`:
 
 ```bash
 git clone <this-repo> ohjime
@@ -40,156 +62,219 @@ cd ohjime/manage/src
 sudo ./deploy/install.sh
 ```
 
-That is the whole setup. It is idempotent — re-run it any time. It installs:
+On the first run it installs the Python environments, vLLM service, collector
+and daily processor units. It creates `/etc/ohjime/telegram.env` with
+placeholders, then leaves the collector and timer disabled so invalid
+credentials cannot enter a restart loop.
 
-| Thing | Where |
-| --- | --- |
-| `uv` (if missing) | `~/.local/bin/uv` |
-| vLLM venv, **Python 3.12**, `vllm==0.25.0` | `~/.local/share/ohjime/vllm` |
-| Summarizer deps (`uv sync`) | `manage/src/.venv` |
-| Model server config | `/etc/ohjime/vllm.env` |
-| `ohjime-vllm.service` | serves Qwen3-8B-AWQ on :8000 |
-| `ohjime-summarizer.service` + `.timer` | hourly summarize run |
-
-Two pins matter and are deliberate:
-
-- **Python 3.12**, not the system Python. Ubuntu 26.04 ships Python 3.14, which
-  vLLM has no wheels for. `uv` fetches 3.12 automatically.
-- **`vllm==0.25.0`**, proven working with Qwen3-8B-AWQ on Turing (SM 7.5).
-
-The installer also runs preflight checks (NVIDIA driver present, GPU compute
-capability, free disk) and disables any pre-existing hand-rolled `vllm.service`,
-which would otherwise fight it for port 8000 and the GPU.
-
-Flags: `--no-timer` (install without the hourly schedule), `--no-start`
-(don't start the model server), `--vllm-venv DIR` (custom venv location).
-Remove everything with `sudo ./deploy/uninstall.sh [--purge]`.
-
-### Managing it
+Create a bot with [BotFather](https://t.me/BotFather), open its private chat,
+and send `t: test message`. Find the numeric IDs before starting long polling:
 
 ```bash
-systemctl status ohjime-vllm              # model server
-sudo systemctl start ohjime-summarizer    # summarize now
-journalctl -u ohjime-summarizer -f        # watch a run
-systemctl list-timers ohjime-summarizer.timer
+export TELEGRAM_BOT_TOKEN='123456789:replace_with_real_token'
+curl -sS -X POST \
+  "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteWebhook" \
+  --data 'drop_pending_updates=false'
+curl -sS \
+  "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates" |
+  jq '.result[] | {
+    user_id: .message.from.id,
+    chat_id: .message.chat.id,
+    thread_id: .message.message_thread_id,
+    text: .message.text
+  }'
 ```
 
-### Manual setup (no systemd)
+Then edit the protected configuration and rerun the idempotent installer:
+
+```bash
+sudoedit /etc/ohjime/telegram.env
+sudo ./deploy/install.sh
+```
+
+The second run validates the token shape and numeric IDs, enables the collector,
+and enables the 10:00 PM timer. The collector calls `deleteWebhook` with
+`drop_pending_updates=false` at startup because Bot API webhooks and long
+polling are mutually exclusive.
+
+Installed components:
+
+| Component | Location or unit |
+| --- | --- |
+| Telegram secrets/config | `/etc/ohjime/telegram.env` (root-only, mode `0600`) |
+| SQLite database | `/var/lib/ohjime/messages.db` |
+| Continuous collector | `ohjime-telegram-collector.service` |
+| Daily processor | `ohjime-summarizer.service` |
+| 10 PM Edmonton schedule | `ohjime-summarizer.timer` |
+| Model server | `ohjime-vllm.service` |
+| Model server config | `/etc/ohjime/vllm.env` |
+
+Validate and inspect the deployment with:
+
+```bash
+systemd-analyze calendar '*-*-* 22:00:00 America/Edmonton'
+systemctl status ohjime-telegram-collector
+systemctl list-timers ohjime-summarizer.timer
+journalctl -u ohjime-telegram-collector -f
+journalctl -u ohjime-summarizer -f
+```
+
+Run the daily processor immediately with:
+
+```bash
+sudo systemctl start ohjime-summarizer
+```
+
+Uninstall units while retaining configuration, model environments, and the
+message database:
+
+```bash
+sudo ./deploy/uninstall.sh
+```
+
+`--purge` additionally removes `/etc/ohjime` and the vLLM environment, but the
+personal database under `/var/lib/ohjime` is deliberately still preserved.
+
+## Configuration
+
+`/etc/ohjime/telegram.env` contains:
+
+| Variable | Default | Meaning |
+| --- | --- | --- |
+| `TELEGRAM_BOT_TOKEN` | required | Token issued by BotFather. |
+| `ALLOWED_USER_ID` | required | Only this numeric sender is accepted. |
+| `ALLOWED_CHAT_ID` | required | Only this numeric private chat/group is accepted. |
+| `DB_PATH` | `/var/lib/ohjime/messages.db` | Shared collector/processor SQLite file. |
+| `LOCAL_TIMEZONE` | `America/Edmonton` | Timezone used in the agent payload. |
+| `MAX_BATCH_BYTES` | `12000` | Model/batch input limit in bytes (minimum `512`). |
+| `THOUGHT_THREAD_ID` | unset | Optional Thoughts topic ID. |
+| `ACTION_THREAD_ID` | unset | Optional Actions topic ID. |
+
+For testing against a local Bot API server, `TELEGRAM_API_ROOT` can replace
+`https://api.telegram.org`. `TELEGRAM_POLL_TIMEOUT` and
+`TELEGRAM_REQUEST_TIMEOUT` default to 50 and 65 seconds respectively.
+
+The model client settings remain in the project `.env`:
+
+| Variable | Default |
+| --- | --- |
+| `VLLM_API_BASE` | `http://localhost:8000/v1` |
+| `VLLM_MODEL` | `Qwen/Qwen3-8B-AWQ` |
+| `VLLM_API_KEY` | `EMPTY` |
+| `VLLM_ENABLE_THINKING` | `false` |
+
+The installed vLLM server binds to `127.0.0.1` by default. If you change its
+port in `/etc/ohjime/vllm.env`, update `VLLM_API_BASE` in the project `.env` as
+well; both the readiness check and ADK client use that project value.
+
+## Manual development
+
+Install the app and development dependencies:
 
 ```bash
 cd manage/src
 cp .env.example .env
 uv sync
-# and serve the model yourself:
-vllm serve Qwen/Qwen3-8B-AWQ --dtype float16 --enforce-eager --max-model-len 16384
 ```
 
-Summarization is plain text-in/text-out, so the server needs **no** tool-calling
-flags. Verify any server with `curl http://localhost:8000/v1/models`.
-
-## Run
+Run the collector with a local database:
 
 ```bash
-uv run check_vllm.py      # optional: sanity-check the endpoint first
-uv run summarize.py       # git pull, summarize the newest dump, write it in
-uv run summarize.py --dry-run       # print the summary, change nothing
-uv run summarize.py --no-pull       # don't git pull first
-uv run summarize.py --file ../../dump/LOG-2026-07-21.md   # a specific dump
+export TELEGRAM_BOT_TOKEN='123456789:replace_with_real_token'
+export ALLOWED_USER_ID='123456789'
+export ALLOWED_CHAT_ID='123456789'
+export DB_PATH="$PWD/messages.db"
+uv run telegram_collector.py
 ```
 
-Or from the repo root, via the Makefile:
+In another shell, drain the queue (the local vLLM endpoint must be running):
 
 ```bash
-make daily-summary                  # summarize and write
-make daily-summary ARGS=--dry-run   # preview, write nothing
+DB_PATH="$PWD/messages.db" uv run summarize.py
+DB_PATH="$PWD/messages.db" uv run summarize.py --dry-run
 ```
 
-What it does:
+`--dry-run` calls the model but intentionally leaves the stable batch queued.
+The next real run receives the same messages and batch ID.
 
-1. Runs `git pull --ff-only` in the repo first (dumps arrive via Obsidian's git
-   push, so this is what makes "latest" actually the latest). Non-fatal — if the
-   box is offline or the remote can't fast-forward, it warns and proceeds on the
-   local files. Skip it with `--no-pull`.
-2. Finds the most recently modified `*.md` in `dump/` (or `--file`).
-3. Extracts the notes (everything below the `<div>` title/date block).
-4. Asks the agent for a 2–4 sentence summary + 3–6 Obsidian tags.
-5. Injects an Obsidian `[!summary]` callout just under the title/date and above
-   the first note. Re-running **refreshes** the block in place (it's wrapped in
-   `<!-- adk-summary:start/end -->` markers) rather than duplicating it.
+## Delivery and retry semantics
 
-Example of what gets inserted:
+The SQLite schema stores the complete raw Telegram message alongside normalized
+text, content type, IDs, timestamps, batch state, and processing state.
 
-```markdown
-<div style="text-align: center;">
-  <h1>Chain of Thoughts and Actions</h1>
-  <h3 ...>July 21, 2026</h3>
-</div>
+- An authorized insert and `next_offset = update_id + 1` commit atomically.
+- Ignored updates still advance the offset, so they cannot block polling.
+- `(chat_id, message_id)` is unique, making duplicate delivery harmless.
+- Edits update only unclaimed, unprocessed messages.
+- A daily run first resumes an incomplete batch; otherwise it claims a
+  chronological slice capped by `MAX_BATCH_BYTES`. At least one message is
+  always claimed, so an individual entry cannot permanently stall the queue.
+- If that individual normalized input exceeds the conservative model chunk
+  size, it is summarized in UTF-8-safe pieces and those partials are synthesized
+  into one stored batch result; the complete original remains in SQLite.
+- The same run keeps claiming context-sized chunks until its startup snapshot
+  is empty. If a chunk fails, that stable batch remains queued and the run
+  stops; already completed chunks stay complete.
+- The processor snapshots the highest pending SQLite row at startup. Messages
+  arriving while it runs remain unclaimed for the next scheduled or manual run.
+- Rows receive `processed_at` only after the ADK function returns successfully.
 
-<!-- adk-summary:start -->
-> [!summary] Summary
-> The author sketched a dump-template with an auto-filled summary, mused about
-> encrypting dumps with classic ciphers on push, and set out to wire the ADK
-> agent up to summarize dumps on the local vLLM box.
->
-> **Tags:** #dumps #local-llm #encryption #adk
-<!-- adk-summary:end -->
+Each validated summary and its tags are stored in the `batches` table in the
+same transaction that marks its messages processed. They are also written to
+stdout, which systemd retains in the `ohjime-summarizer` journal. For example:
 
-> [!start-thought] @ 3:42 AM
-...
+```bash
+sqlite3 /var/lib/ohjime/messages.db \
+  'SELECT batch_id, summary, tags_json, processed_at FROM batches ORDER BY created_at DESC;'
 ```
 
-## Configuration (`.env`)
+Sending the result back through `sendMessage` can be added later without
+changing ingestion; use the stable `batch_id` as an idempotency key for any
+future external side effect.
 
-| Variable               | Default                     | Meaning                                              |
-| ---------------------- | --------------------------- | ---------------------------------------------------- |
-| `VLLM_API_BASE`        | `http://localhost:8000/v1`  | vLLM OpenAI endpoint (keep the `/v1`).               |
-| `VLLM_MODEL`           | `Qwen/Qwen3-8B-AWQ`         | Model id exactly as shown by `/v1/models`.           |
-| `VLLM_API_KEY`         | `EMPTY`                     | Any non-empty value unless vLLM ran with `--api-key`.|
-| `VLLM_ENABLE_THINKING` | `false`                     | Toggle Qwen3's `<think>` reasoning traces.           |
-| `DUMP_DIR`             | `../../dump`                | Where to look for dumps (CLI `--dump-dir` overrides).|
+Photos, voice notes, documents, and other media are retained in `raw_json` with
+their content type. The current text-only agent sees their caption, or an
+attachment placeholder when no caption exists; downloading or transcribing
+media is intentionally outside this first version.
 
-## Layout
+## Security boundary
 
+This bot can collect messages sent directly to it or messages it is allowed to
+see in a group. It cannot read Telegram Saved Messages or unrelated private
+conversations. A group bot must be an administrator or have privacy mode
+disabled to receive ordinary group messages.
+
+The database contains personal message bodies and raw Telegram metadata. Its
+directory is mode `0700`, service-created files use a restrictive umask, and
+the bot token remains in a root-only environment file. The unauthenticated
+vLLM endpoint is loopback-only by default rather than exposed to the LAN.
+
+## Tests and layout
+
+```bash
+uv run pytest -q
+uv run ruff check .
+bash -n deploy/install.sh deploy/uninstall.sh
 ```
+
+```text
 manage/src/
-├── pyproject.toml          # uv project + deps (google-adk, litellm)
-├── .env.example            # copy to .env
-├── summarize.py            # entrypoint: git pull → read latest dump → summarize → inject
-├── dump_ops.py             # pure text ops (find/split/inject); no ADK deps
-├── check_vllm.py           # stdlib-only endpoint diagnostics
-├── deploy/                 # self-contained systemd install (fresh Ubuntu box)
-│   ├── install.sh              # idempotent installer  (sudo ./deploy/install.sh)
-│   ├── uninstall.sh            # clean removal
-│   ├── vllm.env.example        # → /etc/ohjime/vllm.env
-│   ├── ohjime-vllm.service     # model server unit template
-│   ├── ohjime-summarizer.service   # one-shot summarize run
-│   └── ohjime-summarizer.timer     # hourly schedule
-├── scripts/
-│   ├── serve_vllm.sh           # ad-hoc foreground vLLM (with tool flags)
-│   └── enable_service_tools.sh # legacy: tool flags on a hand-rolled vllm.service
-└── vllm_agent/             # ADK agent package (discovered by `adk web`/`adk run`)
-    ├── __init__.py
-    └── agent.py            # root_agent = summarizer LlmAgent(model=LiteLlm(...))
+├── telegram_collector.py       # continuous Bot API long poller
+├── telegram_store.py           # SQLite schema, ingestion, batches, payloads
+├── summarize.py                # scheduled SQLite batch → ADK orchestration
+├── wait_for_vllm.py            # cold-boot readiness using the ADK endpoint config
+├── vllm_agent/agent.py         # local LiteLLM/vLLM summarizer agent
+├── deploy/
+│   ├── install.sh
+│   ├── telegram.env.example
+│   ├── ohjime-telegram-collector.service
+│   ├── ohjime-summarizer.service
+│   ├── ohjime-summarizer.timer
+│   └── ohjime-vllm.service
+└── tests/
 ```
 
-`scripts/` and `check_vllm.py`'s tool-calling probe are carried over from the
-original demo; the summarizer itself uses **no** tools, so they're only relevant
-if you extend the agent later.
-
-## How the vLLM binding works
-
-`vllm_agent/agent.py`:
-
-```python
-from google.adk.agents import LlmAgent
-from google.adk.models.lite_llm import LiteLlm
-
-vllm_model = LiteLlm(
-    model="hosted_vllm/Qwen/Qwen3-8B-AWQ",   # hosted_vllm/ = self-hosted vLLM
-    api_base="http://localhost:8000/v1",
-    api_key="EMPTY",
-    extra_body={"chat_template_kwargs": {"enable_thinking": False}},
-)
-
-root_agent = LlmAgent(name="dump_summarizer", model=vllm_model, ...)
-```
+The default `Qwen/Qwen3-8B-AWQ` configuration remains tuned for the existing
+11 GB RTX 2080 Ti: Python 3.12, `vllm==0.25.0`, float16, eager mode, and a 16K
+model context. Summarization is text-in/text-out and does not require vLLM tool
+calling flags.

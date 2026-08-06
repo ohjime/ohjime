@@ -1,4 +1,4 @@
-# Schedule for the ohjime dump summarizer — installed by deploy/install.sh
+# Daily schedule for the ohjime Telegram summarizer — installed by deploy/install.sh
 #
 # Change the cadence by editing OnCalendar below (or use a drop-in:
 #   sudo systemctl edit ohjime-summarizer.timer
@@ -7,14 +7,14 @@
 # Inspect with:  systemctl list-timers ohjime-summarizer.timer
 
 [Unit]
-Description=Run the ohjime dump summarizer periodically
+Description=Process ohjime Telegram messages daily at 10 PM Edmonton time
 
 [Timer]
-OnCalendar=hourly
+OnCalendar=*-*-* 22:00:00 America/Edmonton
 # Catch up after downtime (the box was off / asleep at the scheduled tick).
 Persistent=true
-# Avoid hammering git + the GPU exactly on the hour.
-RandomizedDelaySec=300
+# Run at the requested wall-clock time rather than systemd's default window.
+AccuracySec=1s
 Unit=ohjime-summarizer.service
 
 [Install]

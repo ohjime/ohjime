@@ -7,7 +7,13 @@ __pycache__/
 # Environment / secrets
 .env
 
+# Local Telegram state (production uses /var/lib/ohjime)
+*.db
+*.db-shm
+*.db-wal
+
 # uv
+uv.lock
 uv.lock.bak
 
 # ruff

@@ -1,10 +1,10 @@
-# ohjime dump summarizer (one-shot) — installed by deploy/install.sh
+# ohjime Telegram-message summarizer (one-shot) — installed by deploy/install.sh
 #
 # Run manually with:  sudo systemctl start ohjime-summarizer
 # Follow output with: journalctl -u ohjime-summarizer -f
 
 [Unit]
-Description=Summarize the latest ohjime dump
+Description=Process collected ohjime Telegram messages
 # The model server must be up; if it is not, this run simply fails and the
 # timer retries on the next tick.
 After=ohjime-vllm.service network-online.target
@@ -14,11 +14,20 @@ Wants=ohjime-vllm.service
 Type=oneshot
 User=@@USER@@
 Group=@@GROUP@@
-WorkingDirectory=@@SRC_DIR@@
-Environment=HOME=@@HOME@@
-Environment=PATH=@@HOME@@/.local/bin:/usr/local/bin:/usr/bin:/bin
+WorkingDirectory="@@SRC_DIR@@"
+Environment="HOME=@@HOME@@"
+Environment="PATH=@@HOME@@/.local/bin:/usr/local/bin:/usr/bin:/bin"
+EnvironmentFile=/etc/ohjime/telegram.env
 
-# summarize.py runs `git pull --ff-only` itself before reading the dump.
-ExecStart=@@UV_BIN@@ run summarize.py
+# After= orders service startup but a Type=simple vLLM unit can still be loading
+# weights. This helper reads the same project .env endpoint, key, and model as
+# the ADK client, so custom ports and authenticated endpoints stay consistent.
+ExecStartPre="@@SRC_DIR@@/.venv/bin/python" "@@SRC_DIR@@/wait_for_vllm.py" --timeout 600
+ExecStart="@@SRC_DIR@@/.venv/bin/python" "@@SRC_DIR@@/summarize.py"
 
-TimeoutStartSec=900
+# Allow a missed-day backlog to drain through several context-sized batches.
+# Every completed batch is durable if this outer safety limit is ever reached.
+TimeoutStartSec=6h
+UMask=0077
+NoNewPrivileges=true
+PrivateTmp=true

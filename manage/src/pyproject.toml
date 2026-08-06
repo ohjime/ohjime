@@ -1,19 +1,23 @@
 [project]
-name = "dump-summarizer"
+name = "telegram-dump-summarizer"
 version = "0.1.0"
-description = "Google ADK agent that summarizes dump notes via a local vLLM server (Qwen3-8B-AWQ)"
+description = "Collect Telegram thoughts in SQLite and summarize them with a local ADK/vLLM agent"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
     "google-adk>=1.0.0",
-    "litellm>=1.63.0",
+    # Newer releases build a Rust bridge from source on this host. This pinned
+    # pure-Python release provides the hosted_vllm path used by the agent.
+    "litellm==1.63.14",
     "python-dotenv>=1.0.1",
+    "requests>=2.32.0",
     # LiteLLM's hosted_vllm provider path imports orjson but doesn't pin it.
     "orjson>=3.10.0",
 ]
 
 [dependency-groups]
 dev = [
+    "pytest>=8.0.0",
     "ruff>=0.6.0",
 ]
 
@@ -23,3 +27,7 @@ package = false
 
 [tool.ruff]
 line-length = 100
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]

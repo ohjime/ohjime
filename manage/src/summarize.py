@@ -1,42 +1,46 @@
-"""Summarize the latest dump and inject the summary into the file.
+"""Summarize durable batches of Telegram thoughts and actions.
 
-    uv run summarize.py                 # summarize the newest dump in ../../dump
-    uv run summarize.py --dry-run       # print the summary, write nothing
-    uv run summarize.py --file path.md  # target a specific dump
-    uv run summarize.py --dump-dir DIR  # look in a different dump directory
-
-The summary (an Obsidian `[!summary]` callout with tags) is placed directly
-below the centered title/date block and above the first note. Re-running
-refreshes the block in place instead of duplicating it. Once written, the
-dump is locked (front matter `obsidianUIMode: preview`) so it always opens
-in reading mode instead of editable live-preview.
-
-Path: the ADK agent talks to the local vLLM server (Qwen/Qwen3-8B-AWQ) through
-LiteLLM. Summarization needs no tool-calling, so the server does NOT need the
-`--enable-auto-tool-choice` flags — a plain `vllm serve` is enough.
+The continuous collector writes authorized Telegram updates to SQLite. This
+scheduled process drains bounded chronological batches, gives their normalized
+text to the ADK agent, and marks each batch processed only after the agent
+succeeds. If processing fails, that batch ID and its rows are retried next time.
 """
+
+from __future__ import annotations
 
 import argparse
 import asyncio
 import json
 import os
 import re
-import subprocess
 import sys
 from pathlib import Path
+from typing import Any
+from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
-import dump_ops
+from telegram_store import (
+    DEFAULT_MAX_BATCH_BYTES,
+    claim_batch,
+    format_batch_for_agent,
+    get_pending_high_watermark,
+    mark_batch_processed,
+    open_database,
+    rows_to_payload,
+)
 from vllm_agent.agent import VLLM_API_BASE, VLLM_MODEL, build_summarizer_agent
 
-APP_NAME = "dump_summarizer"
+APP_NAME = "telegram_dump_summarizer"
 USER_ID = "dump-owner"
-
-# Default dump directory: repo-root/dump  (this file is manage/src/summarize.py).
-DEFAULT_DUMP_DIR = Path(__file__).resolve().parents[2] / "dump"
+DEFAULT_DB_PATH = "/var/lib/ohjime/messages.db"
+DEFAULT_TIMEZONE = "America/Edmonton"
+# Leave room around each piece for the part label and the agent's prompt frame.
+MODEL_INPUT_HEADROOM = 256
+MODEL_INPUT_BYTES = DEFAULT_MAX_BATCH_BYTES - MODEL_INPUT_HEADROOM
+MIN_BATCH_BYTES = 512
 
 BOLD = "\033[1m"
 DIM = "\033[2m"
@@ -44,93 +48,25 @@ GREEN = "\033[32m"
 RESET = "\033[0m"
 
 
-def git_pull(from_dir: Path) -> None:
-    """Fast-forward the repo containing ``from_dir`` before reading dumps.
+class ModelOutputError(ValueError):
+    """Raised when the model does not return a usable summary object."""
 
-    Dumps arrive via Obsidian's git push, so pulling first is what makes the
-    "latest" dump actually the latest. Non-fatal: a missing remote, offline
-    box, or non-git directory prints a warning and lets summarization proceed
-    on whatever is already on disk.
-    """
+
+def positive_int(value: str) -> int:
+    """Argparse converter for positive integer settings."""
+
     try:
-        toplevel = subprocess.run(
-            ["git", "-C", str(from_dir), "rev-parse", "--show-toplevel"],
-            capture_output=True, text=True, check=True,
-        ).stdout.strip()
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        print(f"{DIM}git: {from_dir} is not a git repo — skipping pull{RESET}")
-        return
-
-    print(f"{DIM}git pull (--ff-only) in {toplevel} …{RESET}")
-    result = subprocess.run(
-        ["git", "-C", toplevel, "pull", "--ff-only"],
-        capture_output=True, text=True,
-    )
-    out = (result.stdout + result.stderr).strip()
-    if result.returncode == 0:
-        print(f"{DIM}{out or 'Already up to date.'}{RESET}")
-    else:
-        print(f"{DIM}git pull failed (continuing with local files):\n{out}{RESET}", file=sys.stderr)
-
-
-def git_push_commit(path: Path, message: str) -> bool:
-    """Commit ``path`` alone and push it straight to ``main`` on the remote.
-
-    Stages and commits only this file — restricted with a trailing
-    pathspec, so anything else already staged in the repo (e.g. unrelated
-    work in progress) is left untouched and never swept into this commit.
-    Non-fatal like git_pull: a missing remote, offline box, no changes to
-    commit, or a rejected push prints a warning and returns False rather
-    than raising, since the summary/lock already succeeded on disk either way.
-    """
-    try:
-        toplevel = subprocess.run(
-            ["git", "-C", str(path.parent), "rev-parse", "--show-toplevel"],
-            capture_output=True, text=True, check=True,
-        ).stdout.strip()
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        print(f"{DIM}git: {path} is not in a git repo — skipping commit/push{RESET}")
-        return False
-
-    rel = os.path.relpath(path, toplevel)
-
-    add = subprocess.run(
-        ["git", "-C", toplevel, "add", "--", rel],
-        capture_output=True, text=True,
-    )
-    if add.returncode != 0:
-        print(f"{DIM}git add failed:\n{(add.stdout + add.stderr).strip()}{RESET}", file=sys.stderr)
-        return False
-
-    staged = subprocess.run(["git", "-C", toplevel, "diff", "--cached", "--quiet", "--", rel])
-    if staged.returncode == 0:
-        print(f"{DIM}git: no changes to commit for {rel}{RESET}")
-        return False
-
-    commit = subprocess.run(
-        ["git", "-C", toplevel, "commit", "-m", message, "--", rel],
-        capture_output=True, text=True,
-    )
-    if commit.returncode != 0:
-        print(f"{DIM}git commit failed:\n{(commit.stdout + commit.stderr).strip()}{RESET}", file=sys.stderr)
-        return False
-    print(f"{DIM}{commit.stdout.strip()}{RESET}")
-
-    print(f"{DIM}git push → origin main …{RESET}")
-    push = subprocess.run(
-        ["git", "-C", toplevel, "push", "origin", "HEAD:main"],
-        capture_output=True, text=True,
-    )
-    out = (push.stdout + push.stderr).strip()
-    if push.returncode != 0:
-        print(f"{DIM}git push failed:\n{out}{RESET}", file=sys.stderr)
-        return False
-    print(f"{DIM}{out or 'Pushed to main.'}{RESET}")
-    return True
+        parsed = int(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError("must be an integer") from error
+    if parsed < MIN_BATCH_BYTES:
+        raise argparse.ArgumentTypeError(f"must be at least {MIN_BATCH_BYTES}")
+    return parsed
 
 
 async def run_summary(notes: str) -> str:
-    """Send the dump notes to the agent and return its final text response."""
+    """Send a normalized Telegram batch to the agent and return its reply."""
+
     session_service = InMemorySessionService()
     session = await session_service.create_session(app_name=APP_NAME, user_id=USER_ID)
     runner = Runner(
@@ -139,12 +75,14 @@ async def run_summary(notes: str) -> str:
         session_service=session_service,
     )
 
-    prompt = "Summarize this dump.\n\n---\n" + notes + "\n---"
+    prompt = "Summarize this Telegram thought/action batch.\n\n---\n" + notes + "\n---"
     content = types.Content(role="user", parts=[types.Part(text=prompt)])
 
     chunks: list[str] = []
     async for event in runner.run_async(
-        user_id=USER_ID, session_id=session.id, new_message=content
+        user_id=USER_ID,
+        session_id=session.id,
+        new_message=content,
     ):
         if event.is_final_response() and event.content and event.content.parts:
             chunks.append("".join(part.text or "" for part in event.content.parts))
@@ -152,99 +90,218 @@ async def run_summary(notes: str) -> str:
 
 
 def parse_model_output(raw: str) -> tuple[str, list[str]]:
-    """Extract (summary, tags) from the model reply.
+    """Extract and validate ``(summary, tags)`` from the model reply."""
 
-    Prefers strict JSON; tolerates markdown fences and stray prose by grabbing
-    the first {...} object. Falls back to using the whole reply as the summary.
-    """
     match = re.search(r"\{.*\}", raw, re.DOTALL)
-    if match:
-        try:
-            data = json.loads(match.group(0))
-            summary = str(data.get("summary", "")).strip()
-            tags = data.get("tags", []) or []
-            if not isinstance(tags, list):
-                tags = [str(tags)]
-            if summary:
-                return summary, [str(t) for t in tags]
-        except json.JSONDecodeError:
-            pass
-    return raw.strip(), []
+    if not match:
+        raise ModelOutputError("model response did not contain a JSON object")
+    try:
+        data = json.loads(match.group(0))
+    except json.JSONDecodeError as error:
+        raise ModelOutputError("model response contained invalid JSON") from error
+    if not isinstance(data, dict):
+        raise ModelOutputError("model response was not a JSON object")
+
+    summary = data.get("summary")
+    if not isinstance(summary, str) or not summary.strip():
+        raise ModelOutputError("model response did not contain a non-empty summary")
+
+    tags = data.get("tags", []) or []
+    if not isinstance(tags, list):
+        raise ModelOutputError("model response tags were not a list")
+    return summary.strip(), [str(tag).strip() for tag in tags if str(tag).strip()]
+
+
+def split_model_input(text: str, max_bytes: int = DEFAULT_MAX_BATCH_BYTES) -> list[str]:
+    """Split text on UTF-8 character boundaries for context-safe model calls."""
+
+    if max_bytes <= 0:
+        raise ValueError("max_bytes must be positive")
+    if len(text.encode("utf-8")) <= max_bytes:
+        return [text]
+
+    chunks: list[str] = []
+    current: list[str] = []
+    current_bytes = 0
+    for character in text:
+        character_bytes = len(character.encode("utf-8"))
+        if current and current_bytes + character_bytes > max_bytes:
+            chunks.append("".join(current))
+            current = []
+            current_bytes = 0
+        current.append(character)
+        current_bytes += character_bytes
+    if current:
+        chunks.append("".join(current))
+    return chunks
+
+
+async def summarize_model_input(notes: str, *, batch_id: str) -> tuple[str, list[str]]:
+    """Run and validate one model call without allowing an empty result."""
+
+    raw = await run_summary(notes)
+    if not raw:
+        raise RuntimeError(f"empty model response for batch {batch_id}")
+    return parse_model_output(raw)
+
+
+async def process_messages(
+    messages: list[dict[str, Any]],
+    *,
+    batch_id: str,
+    max_input_bytes: int = DEFAULT_MAX_BATCH_BYTES,
+) -> tuple[str, list[str]]:
+    """Run the existing ADK summarization function for one claimed batch."""
+
+    model_chunk_bytes = min(max_input_bytes, DEFAULT_MAX_BATCH_BYTES) - MODEL_INPUT_HEADROOM
+    if model_chunk_bytes < 4:
+        raise ValueError("max_input_bytes is too small for UTF-8 model input")
+
+    notes = format_batch_for_agent(messages)
+    chunks = split_model_input(notes, max_bytes=model_chunk_bytes)
+    if len(chunks) == 1:
+        return await summarize_model_input(chunks[0], batch_id=batch_id)
+
+    partials: list[dict[str, Any]] = []
+    for index, chunk in enumerate(chunks, start=1):
+        partial_summary, partial_tags = await summarize_model_input(
+            f"[Part {index} of {len(chunks)}]\n{chunk}",
+            batch_id=batch_id,
+        )
+        partials.append({"summary": partial_summary, "tags": partial_tags})
+
+    while len(partials) > 1:
+        synthesis_input = (
+            "Combine these ordered partial summaries into faithful partial summaries:\n"
+            + json.dumps(partials, ensure_ascii=False, separators=(",", ":"))
+        )
+        synthesis_chunks = split_model_input(
+            synthesis_input,
+            max_bytes=model_chunk_bytes,
+        )
+        reduced: list[dict[str, Any]] = []
+        for index, chunk in enumerate(synthesis_chunks, start=1):
+            combined_summary, combined_tags = await summarize_model_input(
+                f"[Synthesis part {index} of {len(synthesis_chunks)}]\n{chunk}",
+                batch_id=batch_id,
+            )
+            reduced.append({"summary": combined_summary, "tags": combined_tags})
+        if len(reduced) >= len(partials):
+            raise ModelOutputError(
+                "partial synthesis did not reduce the result; batch remains queued"
+            )
+        partials = reduced
+
+    return str(partials[0]["summary"]), [str(tag) for tag in partials[0]["tags"]]
 
 
 async def main() -> int:
-    parser = argparse.ArgumentParser(description="Summarize the latest dump file.")
-    parser.add_argument("--file", type=Path, help="Summarize this specific dump file.")
+    parser = argparse.ArgumentParser(
+        description="Summarize unprocessed Telegram thoughts/actions from SQLite."
+    )
     parser.add_argument(
-        "--dump-dir",
+        "--db-path",
         type=Path,
-        default=Path(os.environ.get("DUMP_DIR", DEFAULT_DUMP_DIR)),
-        help="Directory to search for the newest dump (default: repo-root/dump).",
+        default=Path(os.environ.get("DB_PATH", "").strip() or DEFAULT_DB_PATH),
+        help="SQLite database written by telegram_collector.py.",
+    )
+    parser.add_argument(
+        "--timezone",
+        default=os.environ.get("LOCAL_TIMEZONE", "").strip() or DEFAULT_TIMEZONE,
+        help="IANA timezone used for message timestamps.",
+    )
+    parser.add_argument(
+        "--max-batch-bytes",
+        type=positive_int,
+        default=os.environ.get("MAX_BATCH_BYTES", "").strip()
+        or str(DEFAULT_MAX_BATCH_BYTES),
+        help="Conservative UTF-8 input limit used to stay within model context.",
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Print the summary without modifying the file.",
-    )
-    parser.add_argument(
-        "--no-pull",
-        action="store_true",
-        help="Skip the `git pull` that runs before reading the latest dump.",
-    )
-    parser.add_argument(
-        "--no-push",
-        action="store_true",
-        help="Skip the `git commit`/`push` that runs after writing the summary.",
+        help="Run the agent but leave the claimed batch unprocessed for retry.",
     )
     args = parser.parse_args()
 
-    if not args.no_pull:
-        git_pull(args.file.parent if args.file else args.dump_dir)
-
     try:
-        target = args.file if args.file else dump_ops.latest_dump(args.dump_dir)
-    except FileNotFoundError as exc:
-        print(f"{DIM}error: {exc}{RESET}", file=sys.stderr)
-        return 1
+        local_timezone = ZoneInfo(args.timezone)
+    except ZoneInfoNotFoundError:
+        print(f"{DIM}error: unknown timezone: {args.timezone}{RESET}", file=sys.stderr)
+        return 2
 
-    target = Path(target)
-    if not target.exists():
-        print(f"{DIM}error: file not found: {target}{RESET}", file=sys.stderr)
-        return 1
+    connection = open_database(args.db_path)
+    try:
+        through_id = get_pending_high_watermark(connection)
+        if through_id is None:
+            print(f"{DIM}No unprocessed Telegram messages.{RESET}")
+            return 0
 
-    text = target.read_text()
-    notes = dump_ops.clean_notes(text)
-    if not notes:
-        print(f"{DIM}error: no notes found in {target.name} to summarize{RESET}", file=sys.stderr)
-        return 1
+        processed_batches = 0
+        processed_messages = 0
 
-    print(f"{DIM}Summarizing {target.name}  |  model={VLLM_MODEL}  base={VLLM_API_BASE}{RESET}")
-    raw = await run_summary(notes)
-    if not raw:
-        print(f"{DIM}error: empty response from the model{RESET}", file=sys.stderr)
-        return 1
+        while True:
+            claimed = claim_batch(
+                connection,
+                max_batch_bytes=args.max_batch_bytes,
+                through_id=through_id,
+            )
+            if claimed is None:
+                print(
+                    f"\n{GREEN}✓ run snapshot drained: {processed_batches} batch(es), "
+                    f"{processed_messages} message(s){RESET}"
+                )
+                return 0
 
-    summary, tags = parse_model_output(raw)
+            batch_id, rows = claimed
+            messages = rows_to_payload(rows, local_timezone)
+            print(
+                f"{DIM}Summarizing {len(messages)} Telegram message(s)"
+                f"  |  batch={batch_id}  |  model={VLLM_MODEL}  base={VLLM_API_BASE}{RESET}"
+            )
 
-    print(f"\n{BOLD}Summary:{RESET} {summary}")
-    if tags:
-        print(f"{BOLD}Tags:{RESET} {' '.join('#' + t.lstrip('#') for t in tags)}")
+            try:
+                summary, tags = await process_messages(
+                    messages,
+                    batch_id=batch_id,
+                    max_input_bytes=args.max_batch_bytes,
+                )
+            except Exception as error:  # noqa: BLE001 - preserve the batch on any failure
+                print(
+                    f"{DIM}error: batch {batch_id} failed ({type(error).__name__}); "
+                    f"it remains queued for retry{RESET}",
+                    file=sys.stderr,
+                )
+                return 1
 
-    if args.dry_run:
-        print(f"\n{DIM}--dry-run: file not modified.{RESET}")
-        return 0
+            print(f"\n{BOLD}Summary:{RESET} {summary}")
+            if tags:
+                rendered_tags = " ".join("#" + tag.lstrip("#") for tag in tags)
+                print(f"{BOLD}Tags:{RESET} {rendered_tags}")
 
-    updated = dump_ops.inject_summary(text, summary, tags)
-    target.write_text(updated)
-    print(f"\n{GREEN}✓ wrote summary into {target}{RESET}")
+            if args.dry_run:
+                print(f"\n{DIM}--dry-run: batch {batch_id} remains unprocessed for retry.{RESET}")
+                return 0
 
-    dump_ops.lock_note(target)
-    print(f"{GREEN}✓ locked {target.name} to preview mode{RESET}")
+            completed = mark_batch_processed(
+                connection,
+                batch_id,
+                summary=summary,
+                tags=tags,
+            )
+            if completed != len(messages):
+                print(
+                    f"{DIM}error: batch {batch_id} changed while processing "
+                    f"({completed}/{len(messages)} rows completed){RESET}",
+                    file=sys.stderr,
+                )
+                return 1
 
-    if not args.no_push:
-        if git_push_commit(target, f"Summarize dump: {target.name}"):
-            print(f"{GREEN}✓ committed and pushed {target.name} to main{RESET}")
-    return 0
+            processed_batches += 1
+            processed_messages += completed
+            print(f"\n{GREEN}✓ processed batch {batch_id} ({completed} message(s)){RESET}")
+    finally:
+        connection.close()
 
 
 if __name__ == "__main__":

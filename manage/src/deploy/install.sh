@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #
-# Install the ohjime dump-summarizer stack on an Ubuntu machine.
+# Install the ohjime Telegram summarizer stack on an Ubuntu machine.
 #
 #   git clone <repo> && cd ohjime/manage/src && sudo ./deploy/install.sh
 #
@@ -8,12 +8,14 @@
 #   1. uv                      (per-user, if missing)
 #   2. a vLLM venv on Python 3.12  (vLLM does not build on Ubuntu 26.04's 3.14)
 #   3. the summarizer's own venv   (uv sync)
-#   4. /etc/ohjime/vllm.env        (model server config; never overwritten)
-#   5. ohjime-vllm.service         (the model server)
-#   6. ohjime-summarizer.service + .timer  (hourly summarize run)
+#   4. /etc/ohjime/*.env           (model + Telegram config; never overwritten)
+#   5. /var/lib/ohjime             (private SQLite state directory)
+#   6. ohjime-vllm.service         (the model server)
+#   7. ohjime-telegram-collector.service  (continuous Telegram ingestion)
+#   8. ohjime-summarizer.service + .timer (daily 10 PM processing)
 #
 # Options:
-#   --no-timer      install the units but do not enable the hourly timer
+#   --no-timer      install the units but do not enable the daily timer
 #   --no-start      install everything but do not start the model server
 #   --vllm-venv D   use/create the vLLM venv at directory D
 #
@@ -29,7 +31,14 @@ while [ $# -gt 0 ]; do
     case "$1" in
         --no-timer)   ENABLE_TIMER=0 ;;
         --no-start)   START_SERVER=0 ;;
-        --vllm-venv)  VLLM_VENV_OVERRIDE="$2"; shift ;;
+        --vllm-venv)
+            [ "$#" -ge 2 ] && [ -n "$2" ] || {
+                echo "--vllm-venv requires a directory" >&2
+                exit 2
+            }
+            VLLM_VENV_OVERRIDE="$2"
+            shift
+            ;;
         -h|--help)    sed -n '2,25p' "$0"; exit 0 ;;
         *) echo "unknown option: $1" >&2; exit 2 ;;
     esac
@@ -56,13 +65,10 @@ USER_GROUP="$(id -gn "$TARGET_USER")"
 
 SRC_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 DEPLOY_DIR="$SRC_DIR/deploy"
-REPO_ROOT="$(git -C "$SRC_DIR" rev-parse --show-toplevel 2>/dev/null || echo "")"
-[ -n "$REPO_ROOT" ] || die "$SRC_DIR is not inside a git clone (summarize.py needs git pull)"
 
 VLLM_VENV="${VLLM_VENV_OVERRIDE:-$USER_HOME/.local/share/ohjime/vllm}"
 
 log "user=$TARGET_USER  home=$USER_HOME"
-log "repo=$REPO_ROOT"
 log "src =$SRC_DIR"
 
 run_as_user() { sudo -u "$TARGET_USER" -H bash -c "$1"; }
@@ -71,6 +77,7 @@ run_as_user() { sudo -u "$TARGET_USER" -H bash -c "$1"; }
 log "preflight checks"
 
 command -v systemctl >/dev/null || die "systemd not found; this installer targets Ubuntu/systemd"
+command -v curl >/dev/null || die "curl not found; install it first: sudo apt install curl"
 
 if command -v nvidia-smi >/dev/null 2>&1; then
     gpu_info="$(nvidia-smi --query-gpu=name,memory.total,compute_cap --format=csv,noheader | head -1)"
@@ -133,6 +140,7 @@ fi
 # --- 4. Summarizer deps -----------------------------------------------------
 log "installing summarizer dependencies (uv sync)"
 run_as_user "cd '$SRC_DIR' && '$UV_BIN' sync"
+[ -x "$SRC_DIR/.venv/bin/python" ] || die "summarizer virtualenv was not created"
 [ -f "$SRC_DIR/.env" ] || {
     log "creating $SRC_DIR/.env from .env.example"
     run_as_user "cp '$SRC_DIR/.env.example' '$SRC_DIR/.env'"
@@ -140,11 +148,58 @@ run_as_user "cd '$SRC_DIR' && '$UV_BIN' sync"
 
 # --- 5. Config --------------------------------------------------------------
 install -d -m 0755 /etc/ohjime
+install -d -m 0700 -o "$TARGET_USER" -g "$USER_GROUP" /var/lib/ohjime
 if [ -f /etc/ohjime/vllm.env ]; then
     log "/etc/ohjime/vllm.env exists — leaving it untouched"
 else
     install -m 0644 "$DEPLOY_DIR/vllm.env.example" /etc/ohjime/vllm.env
     log "wrote /etc/ohjime/vllm.env"
+fi
+
+if [ -f /etc/ohjime/telegram.env ]; then
+    log "/etc/ohjime/telegram.env exists — leaving its contents untouched"
+else
+    install -m 0600 "$DEPLOY_DIR/telegram.env.example" /etc/ohjime/telegram.env
+    log "wrote /etc/ohjime/telegram.env"
+fi
+# The system manager reads EnvironmentFile before dropping privileges, so the
+# bot token can and should remain readable only by root.
+chown root:root /etc/ohjime/telegram.env
+chmod 0600 /etc/ohjime/telegram.env
+
+# Telegram cannot start with useful defaults. Only activate ingestion and the
+# daily timer once a real token and numeric allow-list IDs have been supplied.
+env_value() {
+    local key="$1"
+    sed -n "s/^[[:space:]]*${key}[[:space:]]*=[[:space:]]*//p" \
+        /etc/ohjime/telegram.env | tail -1
+}
+
+TELEGRAM_CONFIG_READY=0
+telegram_bot_token="$(env_value TELEGRAM_BOT_TOKEN)"
+allowed_user_id="$(env_value ALLOWED_USER_ID)"
+allowed_chat_id="$(env_value ALLOWED_CHAT_ID)"
+thought_thread_id="$(env_value THOUGHT_THREAD_ID)"
+action_thread_id="$(env_value ACTION_THREAD_ID)"
+max_batch_bytes="$(env_value MAX_BATCH_BYTES)"
+max_batch_bytes_valid=0
+if [[ -z "$max_batch_bytes" ]]; then
+    max_batch_bytes_valid=1
+elif [[ "$max_batch_bytes" =~ ^[1-9][0-9]*$ ]] &&
+    (( 10#$max_batch_bytes >= 512 ))
+then
+    max_batch_bytes_valid=1
+fi
+
+if [[ "$telegram_bot_token" != *replace* ]] &&
+    [[ "$telegram_bot_token" =~ ^[0-9]+:[A-Za-z0-9_-]+$ ]] &&
+    [[ "$allowed_user_id" =~ ^[0-9]+$ ]] &&
+    [[ "$allowed_chat_id" =~ ^-?[0-9]+$ ]] &&
+    [[ -z "$thought_thread_id" || "$thought_thread_id" =~ ^[0-9]+$ ]] &&
+    [[ -z "$action_thread_id" || "$action_thread_id" =~ ^[0-9]+$ ]] &&
+    [[ "$max_batch_bytes_valid" -eq 1 ]]
+then
+    TELEGRAM_CONFIG_READY=1
 fi
 
 # --- 6. Legacy service ------------------------------------------------------
@@ -161,7 +216,6 @@ render() {
         -e "s|@@GROUP@@|$USER_GROUP|g" \
         -e "s|@@HOME@@|$USER_HOME|g" \
         -e "s|@@SRC_DIR@@|$SRC_DIR|g" \
-        -e "s|@@REPO_ROOT@@|$REPO_ROOT|g" \
         -e "s|@@VLLM_BIN@@|$VLLM_BIN|g" \
         -e "s|@@UV_BIN@@|$UV_BIN|g" \
         "$1" > "$2"
@@ -170,6 +224,8 @@ render() {
 
 log "installing systemd units"
 render "$DEPLOY_DIR/ohjime-vllm.service"       /etc/systemd/system/ohjime-vllm.service
+render "$DEPLOY_DIR/ohjime-telegram-collector.service" \
+    /etc/systemd/system/ohjime-telegram-collector.service
 render "$DEPLOY_DIR/ohjime-summarizer.service" /etc/systemd/system/ohjime-summarizer.service
 render "$DEPLOY_DIR/ohjime-summarizer.timer"   /etc/systemd/system/ohjime-summarizer.timer
 systemctl daemon-reload
@@ -177,32 +233,38 @@ systemctl daemon-reload
 # --- 8. Start ---------------------------------------------------------------
 if [ "$START_SERVER" -eq 1 ]; then
     log "enabling + starting ohjime-vllm (first run may download ~5.5 GB)"
-    systemctl enable --now ohjime-vllm.service
+    systemctl enable ohjime-vllm.service
+    systemctl restart ohjime-vllm.service
 
-    port="$(. /etc/ohjime/vllm.env; echo "${VLLM_PORT:-8000}")"
-    printf '    waiting for the model server on :%s ' "$port"
-    for _ in $(seq 1 120); do
-        if curl -sf --max-time 2 "http://localhost:$port/v1/models" >/dev/null 2>&1; then
-            printf ' ready\n'
-            break
-        fi
-        printf '.'
-        sleep 5
-    done
-    curl -sf --max-time 2 "http://localhost:$port/v1/models" >/dev/null 2>&1 || {
-        printf '\n'
+    log "waiting for the model endpoint configured in $SRC_DIR/.env"
+    if ! run_as_user \
+        "'$SRC_DIR/.venv/bin/python' '$SRC_DIR/wait_for_vllm.py' --timeout 600"
+    then
         warn "server not up yet; watch it with:  journalctl -u ohjime-vllm -f"
-    }
+    fi
 else
     systemctl enable ohjime-vllm.service
     log "installed but not started (--no-start)"
 fi
 
-if [ "$ENABLE_TIMER" -eq 1 ]; then
-    systemctl enable --now ohjime-summarizer.timer
-    log "hourly summarizer timer enabled"
+if [ "$TELEGRAM_CONFIG_READY" -eq 1 ]; then
+    systemctl enable ohjime-telegram-collector.service
+    systemctl restart ohjime-telegram-collector.service
+    log "Telegram collector enabled + started"
+
+    if [ "$ENABLE_TIMER" -eq 1 ]; then
+        systemctl enable ohjime-summarizer.timer
+        systemctl restart ohjime-summarizer.timer
+        log "daily 10 PM summarizer timer enabled"
+    else
+        systemctl disable --now ohjime-summarizer.timer >/dev/null 2>&1 || true
+        log "timer left disabled (--no-timer)"
+    fi
 else
-    log "timer left disabled (--no-timer)"
+    systemctl disable --now ohjime-telegram-collector.service \
+        ohjime-summarizer.timer >/dev/null 2>&1 || true
+    warn "Telegram credentials are still placeholders; collector and timer are disabled"
+    warn "edit /etc/ohjime/telegram.env, then rerun: sudo ./deploy/install.sh"
 fi
 
 cat <<EOF
@@ -210,9 +272,12 @@ cat <<EOF
 $(printf '\033[32mInstalled.\033[0m')
 
   model server   systemctl status ohjime-vllm
+  collector      systemctl status ohjime-telegram-collector
   run summarizer sudo systemctl start ohjime-summarizer
-  logs           journalctl -u ohjime-summarizer -f
+  collector logs journalctl -u ohjime-telegram-collector -f
+  processor logs journalctl -u ohjime-summarizer -f
   schedule       systemctl list-timers ohjime-summarizer.timer
-  config         /etc/ohjime/vllm.env
+  config         /etc/ohjime/{vllm,telegram}.env
+  database       /var/lib/ohjime/messages.db
   uninstall      sudo ./deploy/uninstall.sh
 EOF

@@ -1,4 +1,4 @@
-"""A Google ADK agent that summarizes dump files, served by local vLLM.
+"""A Google ADK agent that summarizes Telegram thought/action batches.
 
 The bridge is LiteLLM: ADK's ``LiteLlm`` model wrapper talks to any
 OpenAI-compatible endpoint. For a self-hosted vLLM server, LiteLLM uses the
@@ -37,14 +37,12 @@ ENABLE_THINKING = os.environ.get("VLLM_ENABLE_THINKING", "false").lower() in (
 )
 
 # --- Instruction ------------------------------------------------------------
-# The dumps are a stream-of-consciousness "Chain of Thoughts and Actions": a
-# series of `[!start-thought]` / `[!start-action]` callouts. We want a compact
-# summary plus a few Obsidian tags. Strict JSON keeps the output machine-parsable
-# (summarize.py falls back to treating the whole reply as the summary if the
-# model ever strays from the format).
+# Telegram supplies a stream-of-consciousness "Chain of Thoughts and Actions"
+# as normalized, timestamped thought/action entries. We want a compact summary
+# plus a few Obsidian tags. Strict JSON keeps the output machine-parsable.
 SUMMARIZER_INSTRUCTION = """\
-You summarize a personal "Chain of Thoughts and Actions" note (a dump).
-The note is a stream of timestamped thoughts and actions.
+You summarize a personal "Chain of Thoughts and Actions" Telegram batch.
+The batch is a chronological stream of timestamped thoughts and actions.
 
 Write a faithful, concise summary of what the author was thinking about and did:
 2-4 sentences, third person, no fluff, no preamble. Then choose 3-6 short
@@ -71,11 +69,11 @@ vllm_model = LiteLlm(
 
 
 def build_summarizer_agent() -> LlmAgent:
-    """Construct the dump-summarizer agent (no tools; pure text summarization)."""
+    """Construct the Telegram-batch summarizer (no tools; pure text only)."""
     return LlmAgent(
         name="dump_summarizer",
         model=vllm_model,
-        description="Summarizes personal dump notes served by a local vLLM server.",
+        description="Summarizes personal Telegram thoughts and actions via local vLLM.",
         instruction=SUMMARIZER_INSTRUCTION,
         # Low temperature => stable, faithful summaries and reliable JSON.
         generate_content_config=types.GenerateContentConfig(

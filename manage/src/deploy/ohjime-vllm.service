@@ -20,9 +20,9 @@ Group=@@GROUP@@
 EnvironmentFile=/etc/ohjime/vllm.env
 # Keep the HF weight cache in the service user's home so it is shared with
 # any manual `vllm serve` runs and survives reinstalls.
-Environment=HF_HOME=@@HOME@@/.cache/huggingface
+Environment="HF_HOME=@@HOME@@/.cache/huggingface"
 
-ExecStart=@@VLLM_BIN@@ serve ${VLLM_MODEL} \
+ExecStart="@@VLLM_BIN@@" serve ${VLLM_MODEL} \
     --host ${VLLM_HOST} \
     --port ${VLLM_PORT} \
     --max-model-len ${VLLM_MAX_LEN} \

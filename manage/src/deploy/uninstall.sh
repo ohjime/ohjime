@@ -5,7 +5,8 @@
 #   sudo ./deploy/uninstall.sh            # remove units, keep config + venvs
 #   sudo ./deploy/uninstall.sh --purge    # also remove /etc/ohjime and the vLLM venv
 #
-# Model weights in ~/.cache/huggingface are never touched.
+# Collected messages in /var/lib/ohjime and model weights in
+# ~/.cache/huggingface are never touched.
 #
 set -euo pipefail
 
@@ -16,7 +17,12 @@ PURGE=0
 
 log() { printf '\033[1m==>\033[0m %s\n' "$*"; }
 
-for unit in ohjime-summarizer.timer ohjime-summarizer.service ohjime-vllm.service; do
+for unit in \
+    ohjime-summarizer.timer \
+    ohjime-summarizer.service \
+    ohjime-telegram-collector.service \
+    ohjime-vllm.service
+do
     if systemctl list-unit-files "$unit" >/dev/null 2>&1; then
         log "removing $unit"
         systemctl disable --now "$unit" >/dev/null 2>&1 || true
@@ -41,4 +47,5 @@ if [ "$PURGE" -eq 1 ]; then
     log "model weights in ~/.cache/huggingface were left in place"
 fi
 
+log "collected messages in /var/lib/ohjime were left in place"
 log "done"
