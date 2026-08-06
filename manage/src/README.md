@@ -58,8 +58,8 @@ normal user who invokes `sudo`:
 
 ```bash
 git clone <this-repo> ohjime
-cd ohjime/manage/src
-sudo ./deploy/install.sh
+cd ohjime
+make setup
 ```
 
 On the first run it installs the Python environments, vLLM service, collector
@@ -67,33 +67,32 @@ and daily processor units. It creates `/etc/ohjime/telegram.env` with
 placeholders, then leaves the collector and timer disabled so invalid
 credentials cannot enter a restart loop.
 
-Create a bot with [BotFather](https://t.me/BotFather), open its private chat,
-and send `t: test message`. Find the numeric IDs before starting long polling:
+Create a bot with [BotFather](https://t.me/BotFather) on your Mac and copy the
+token it gives you. Then run the interactive Ubuntu configuration command:
 
 ```bash
-export TELEGRAM_BOT_TOKEN='123456789:replace_with_real_token'
-curl -sS -X POST \
-  "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/deleteWebhook" \
-  --data 'drop_pending_updates=false'
-curl -sS \
-  "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/getUpdates" |
-  jq '.result[] | {
-    user_id: .message.from.id,
-    chat_id: .message.chat.id,
-    thread_id: .message.message_thread_id,
-    text: .message.text
-  }'
+make telegram-env
 ```
 
-Then edit the protected configuration and rerun the idempotent installer:
+It securely prompts for the token, asks you to send a test message to the bot
+from your Mac containing a generated one-time phrase, discovers the numeric
+user and chat IDs from that exact message, asks for confirmation, and writes
+`/etc/ohjime/telegram.env` as `root:root` with mode `0600`. The token is not
+echoed or placed in shell history. Run this before sending real notes: older
+pending setup-era updates are acknowledged while it searches for the one-time
+phrase. On later reconfiguration it pauses an active collector to avoid
+competing Bot API pollers, restoring it automatically if configuration is
+cancelled or fails.
+
+Activate Telegram ingestion after the command succeeds:
 
 ```bash
-sudoedit /etc/ohjime/telegram.env
-sudo ./deploy/install.sh
+make run
 ```
 
-The second run validates the token shape and numeric IDs, enables the collector,
-and enables the 10:00 PM timer. The collector calls `deleteWebhook` with
+The activation command validates the token shape and numeric IDs, enables the
+collector, and enables the 10:00 PM timer without restarting the model server.
+The collector calls `deleteWebhook` with
 `drop_pending_updates=false` at startup because Bot API webhooks and long
 polling are mutually exclusive.
 
@@ -259,6 +258,8 @@ bash -n deploy/install.sh deploy/uninstall.sh
 
 ```text
 manage/src/
+├── ubuntu_commands.py         # reliable setup/configure/run command dispatcher
+├── configure_telegram_env.py  # interactive token/ID discovery and protected config
 ├── telegram_collector.py       # continuous Bot API long poller
 ├── telegram_store.py           # SQLite schema, ingestion, batches, payloads
 ├── summarize.py                # scheduled SQLite batch → ADK orchestration

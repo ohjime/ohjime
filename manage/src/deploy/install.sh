@@ -264,7 +264,8 @@ else
     systemctl disable --now ohjime-telegram-collector.service \
         ohjime-summarizer.timer >/dev/null 2>&1 || true
     warn "Telegram credentials are still placeholders; collector and timer are disabled"
-    warn "edit /etc/ohjime/telegram.env, then rerun: sudo ./deploy/install.sh"
+    warn "from the repo root, run: make telegram-env"
+    warn "then enable collection with: make run"
 fi
 
 cat <<EOF
