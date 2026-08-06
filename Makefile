@@ -1,4 +1,4 @@
-.PHONY: docs clean setup telegram-env run telegram-collector daily-summary
+.PHONY: docs clean setup telegram-env telegram-commands run telegram-collector daily-summary
 
 ARGS ?=
 SETUP_ARGS ?=
@@ -25,6 +25,10 @@ setup:
 # message sent to the bot, and write /etc/ohjime/telegram.env as root:root 0600.
 telegram-env:
 	@$(UBUNTU_PYTHON) manage/src/ubuntu_commands.py telegram-env
+
+# Register /thought and /action in the configured private Telegram chat.
+telegram-commands:
+	@$(UBUNTU_PYTHON) manage/src/ubuntu_commands.py telegram-commands
 
 # After `make setup` and `make telegram-env`, validate the credentials and
 # enable the collector and 10 PM timer. The model server installed by setup is

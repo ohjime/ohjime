@@ -13,8 +13,9 @@ from telegram_collector import (
     delete_webhook,
     get_updates,
     poll_once,
+    set_message_reaction,
 )
-from telegram_store import get_next_offset
+from telegram_store import StoredMessage, get_next_offset
 
 
 class FakeResponse:
@@ -165,6 +166,34 @@ def test_delete_webhook_raises_for_bot_api_failure(
         delete_webhook(session, config)
 
 
+@pytest.mark.parametrize(
+    ("kind", "emoji"),
+    [("thought", "✍"), ("action", "👍")],
+)
+def test_set_message_reaction_uses_kind_emoji(
+    telegram_environment: dict[str, str],
+    kind: str,
+    emoji: str,
+) -> None:
+    config = CollectorConfig.from_env()
+    session = FakeSession(FakeResponse({"ok": True, "result": True}))
+
+    set_message_reaction(
+        session,
+        config,
+        StoredMessage(chat_id=200, message_id=10, kind=kind),
+    )
+
+    url, request = session.calls[0]
+    assert url == f"{config.api_base}/setMessageReaction"
+    assert request["json"] == {
+        "chat_id": 200,
+        "message_id": 10,
+        "reaction": [{"type": "emoji", "emoji": emoji}],
+    }
+    assert request["timeout"] == 5
+
+
 def test_poll_once_stores_only_authorized_messages_and_advances_past_all_updates(
     database: sqlite3.Connection,
     telegram_environment: dict[str, str],
@@ -191,6 +220,7 @@ def test_poll_once_stores_only_authorized_messages_and_advances_past_all_updates
                 "result": [authorized_topic_message, unauthorized_message, ignored_update],
             }
         ),
+        FakeResponse({"ok": True, "result": True}),
         FakeResponse({"ok": True, "result": []}),
     )
 
@@ -200,9 +230,35 @@ def test_poll_once_stores_only_authorized_messages_and_advances_past_all_updates
     assert [tuple(row) for row in rows] == [("thought", "No prefix needed in a topic")]
     assert get_next_offset(database) == 103
     assert session.calls[0][1]["json"]["offset"] == 0
+    assert session.calls[1][0] == f"{config.api_base}/setMessageReaction"
 
     poll_once(session, database, config)
-    assert session.calls[1][1]["json"]["offset"] == 103
+    assert session.calls[2][1]["json"]["offset"] == 103
+
+
+def test_poll_once_keeps_stored_message_when_reaction_fails(
+    database: sqlite3.Connection,
+    telegram_environment: dict[str, str],
+    make_update: Callable[..., dict[str, Any]],
+) -> None:
+    config = CollectorConfig.from_env()
+    thought = make_update(update_id=100, message_id=10, text="t: Consider it")
+    action = make_update(update_id=101, message_id=11, text="a: Do it")
+    session = FakeSession(
+        FakeResponse({"ok": True, "result": [thought, action]}),
+        FakeResponse({"ok": False, "description": "reaction unavailable"}),
+        FakeResponse({"ok": True, "result": True}),
+    )
+
+    assert poll_once(session, database, config) == 2
+
+    rows = database.execute("SELECT kind, body FROM messages ORDER BY id").fetchall()
+    assert [tuple(row) for row in rows] == [
+        ("thought", "Consider it"),
+        ("action", "Do it"),
+    ]
+    assert get_next_offset(database) == 102
+    assert session.calls[2][1]["json"]["message_id"] == 11
 
 
 def test_poll_once_leaves_offset_unchanged_when_request_fails(

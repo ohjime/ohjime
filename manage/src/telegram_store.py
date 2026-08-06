@@ -14,12 +14,23 @@ import sqlite3
 import time
 import uuid
 from collections.abc import Iterable, Mapping, Sequence
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
 
 DEFAULT_MAX_BATCH_BYTES = 12_000
+
+
+@dataclass(frozen=True)
+class StoredMessage:
+    """A committed Telegram message that may receive a visual acknowledgement."""
+
+    chat_id: int
+    message_id: int
+    kind: str
+
 
 SCHEMA = """
 PRAGMA journal_mode = WAL;
@@ -187,7 +198,7 @@ def store_update(
     allowed_chat_id: int,
     thought_thread_id: int | None = None,
     action_thread_id: int | None = None,
-) -> None:
+) -> StoredMessage | None:
     """Store one authorized update and atomically acknowledge its update ID.
 
     Ignored updates are acknowledged too, otherwise one unauthorized or
@@ -198,6 +209,7 @@ def store_update(
     update_id = int(update["update_id"])
     message = update.get("message") or update.get("edited_message")
 
+    stored_message: StoredMessage | None = None
     with connection:
         if message is not None:
             chat_id = int(message.get("chat", {}).get("id", 0))
@@ -210,7 +222,7 @@ def store_update(
                     thought_thread_id=thought_thread_id,
                     action_thread_id=action_thread_id,
                 )
-                connection.execute(
+                cursor = connection.execute(
                     """
                     INSERT INTO messages (
                         update_id,
@@ -253,8 +265,15 @@ def store_update(
                         json.dumps(message, ensure_ascii=False, separators=(",", ":")),
                     ),
                 )
+                if cursor.rowcount > 0:
+                    stored_message = StoredMessage(
+                        chat_id=chat_id,
+                        message_id=int(message["message_id"]),
+                        kind=kind,
+                    )
 
         _advance_offset(connection, update_id)
+    return stored_message
 
 
 def claim_batch(

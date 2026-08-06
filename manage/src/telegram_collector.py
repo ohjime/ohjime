@@ -13,9 +13,13 @@ from typing import Any
 import requests
 from dotenv import find_dotenv, load_dotenv
 
-from telegram_store import get_next_offset, open_database, store_update
+from telegram_store import StoredMessage, get_next_offset, open_database, store_update
 
 DEFAULT_DB_PATH = "/var/lib/ohjime/messages.db"
+MESSAGE_REACTIONS = {
+    "thought": "✍",
+    "action": "👍",
+}
 
 logging.basicConfig(
     level=logging.INFO,
@@ -171,6 +175,28 @@ def get_updates(
     return result
 
 
+def set_message_reaction(
+    session: requests.Session,
+    config: CollectorConfig,
+    stored_message: StoredMessage,
+) -> None:
+    """Visually acknowledge a stored thought or action in Telegram."""
+
+    emoji = MESSAGE_REACTIONS.get(stored_message.kind)
+    if emoji is None:
+        return
+    response = session.post(
+        f"{config.api_base}/setMessageReaction",
+        json={
+            "chat_id": stored_message.chat_id,
+            "message_id": stored_message.message_id,
+            "reaction": [{"type": "emoji", "emoji": emoji}],
+        },
+        timeout=min(config.request_timeout, 5),
+    )
+    _response_payload(response)
+
+
 def poll_once(
     session: requests.Session,
     connection: sqlite3.Connection,
@@ -179,8 +205,9 @@ def poll_once(
     """Fetch and durably consume one page of updates; return its size."""
 
     updates = get_updates(session, config, get_next_offset(connection))
+    stored_messages: list[StoredMessage] = []
     for update in updates:
-        store_update(
+        stored_message = store_update(
             connection,
             update,
             allowed_user_id=config.allowed_user_id,
@@ -188,6 +215,22 @@ def poll_once(
             thought_thread_id=config.thought_thread_id,
             action_thread_id=config.action_thread_id,
         )
+        if stored_message is not None:
+            stored_messages.append(stored_message)
+
+    # Store and acknowledge the complete Telegram page before attempting any
+    # cosmetic API calls. Slow or unavailable reactions cannot delay storage.
+    for stored_message in stored_messages:
+        if stored_message.kind in MESSAGE_REACTIONS:
+            try:
+                set_message_reaction(session, config, stored_message)
+            except Exception as error:  # noqa: BLE001 - reactions are cosmetic only
+                LOGGER.warning(
+                    "Stored %s message %s, but its reaction failed: %s",
+                    stored_message.kind,
+                    stored_message.message_id,
+                    _safe_error(error),
+                )
     return len(updates)
 
 

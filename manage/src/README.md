@@ -93,6 +93,12 @@ make run
 
 The activation command validates the token shape and numeric IDs, enables the
 collector, and enables the 10:00 PM timer without restarting the model server.
+It also registers `/thought` and `/action` in the configured chat's Telegram
+command menu. Each command and its content belong in one message, for example
+`/thought Consider grouping related notes`. To refresh only the command menu,
+run `make telegram-commands`. The menu uses ✍ and 👍 labels, and the collector
+reacts to each stored thought with ✍ and each stored action with 👍. Reactions
+are cosmetic: an unavailable reaction never prevents SQLite storage.
 The collector calls `deleteWebhook` with
 `drop_pending_updates=false` at startup because Bot API webhooks and long
 polling are mutually exclusive.
@@ -261,6 +267,7 @@ bash -n deploy/install.sh deploy/uninstall.sh
 manage/src/
 ├── ubuntu_commands.py         # reliable setup/configure/run command dispatcher
 ├── configure_telegram_env.py  # interactive token/ID discovery and protected config
+├── register_telegram_commands.py # install /thought and /action in Telegram
 ├── telegram_collector.py       # continuous Bot API long poller
 ├── telegram_store.py           # SQLite schema, ingestion, batches, payloads
 ├── summarize.py                # scheduled SQLite batch → ADK orchestration
