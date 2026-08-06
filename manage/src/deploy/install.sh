@@ -5,14 +5,15 @@
 #   git clone <repo> && cd ohjime/manage/src && sudo ./deploy/install.sh
 #
 # Sets up, idempotently (safe to re-run):
-#   1. uv                      (per-user, if missing)
-#   2. a vLLM venv on Python 3.12  (vLLM does not build on Ubuntu 26.04's 3.14)
-#   3. the summarizer's own venv   (uv sync)
-#   4. /etc/ohjime/*.env           (model + Telegram config; never overwritten)
-#   5. /var/lib/ohjime             (private SQLite state directory)
-#   6. ohjime-vllm.service         (the model server)
-#   7. ohjime-telegram-collector.service  (continuous Telegram ingestion)
-#   8. ohjime-summarizer.service + .timer (daily 10 PM processing)
+#   1. required Ubuntu packages, including FFmpeg for TorchCodec
+#   2. uv                      (per-user, if missing)
+#   3. a vLLM venv on Python 3.12  (vLLM does not build on Ubuntu 26.04's 3.14)
+#   4. the summarizer's own venv   (uv sync)
+#   5. /etc/ohjime/*.env           (model + Telegram config; never overwritten)
+#   6. /var/lib/ohjime             (private SQLite state directory)
+#   7. ohjime-vllm.service         (the model server)
+#   8. ohjime-telegram-collector.service  (continuous Telegram ingestion)
+#   9. ohjime-summarizer.service + .timer (daily 10 PM processing)
 #
 # Options:
 #   --no-timer      install the units but do not enable the daily timer
@@ -78,6 +79,17 @@ log "preflight checks"
 
 command -v systemctl >/dev/null || die "systemd not found; this installer targets Ubuntu/systemd"
 command -v curl >/dev/null || die "curl not found; install it first: sudo apt install curl"
+
+# vLLM imports TorchCodec even for text-only models. TorchCodec dynamically
+# loads FFmpeg's shared libav* libraries, so the executable and runtime
+# libraries must both be present before the model service starts.
+if ! command -v ffmpeg >/dev/null 2>&1; then
+    command -v apt-get >/dev/null || die "apt-get not found; install FFmpeg before continuing"
+    log "installing FFmpeg required by TorchCodec"
+    apt-get update
+    DEBIAN_FRONTEND=noninteractive apt-get install -y ffmpeg
+fi
+command -v ffmpeg >/dev/null 2>&1 || die "FFmpeg installation failed"
 
 if command -v nvidia-smi >/dev/null 2>&1; then
     gpu_info="$(nvidia-smi --query-gpu=name,memory.total,compute_cap --format=csv,noheader | head -1)"
@@ -228,6 +240,13 @@ render "$DEPLOY_DIR/ohjime-telegram-collector.service" \
     /etc/systemd/system/ohjime-telegram-collector.service
 render "$DEPLOY_DIR/ohjime-summarizer.service" /etc/systemd/system/ohjime-summarizer.service
 render "$DEPLOY_DIR/ohjime-summarizer.timer"   /etc/systemd/system/ohjime-summarizer.timer
+
+log "validating systemd units"
+systemd-analyze verify \
+    /etc/systemd/system/ohjime-vllm.service \
+    /etc/systemd/system/ohjime-telegram-collector.service \
+    /etc/systemd/system/ohjime-summarizer.service \
+    /etc/systemd/system/ohjime-summarizer.timer
 systemctl daemon-reload
 
 # --- 8. Start ---------------------------------------------------------------

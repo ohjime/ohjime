@@ -14,7 +14,7 @@ Wants=ohjime-vllm.service
 Type=oneshot
 User=@@USER@@
 Group=@@GROUP@@
-WorkingDirectory="@@SRC_DIR@@"
+WorkingDirectory=@@SRC_DIR@@
 Environment="HOME=@@HOME@@"
 Environment="PATH=@@HOME@@/.local/bin:/usr/local/bin:/usr/bin:/bin"
 EnvironmentFile=/etc/ohjime/telegram.env

@@ -62,8 +62,9 @@ cd ohjime
 make setup
 ```
 
-On the first run it installs the Python environments, vLLM service, collector
-and daily processor units. It creates `/etc/ohjime/telegram.env` with
+On the first run it installs FFmpeg (required by TorchCodec), the Python
+environments, vLLM service, collector, and daily processor units. It creates
+`/etc/ohjime/telegram.env` with
 placeholders, then leaves the collector and timer disabled so invalid
 credentials cannot enter a restart loop.
 

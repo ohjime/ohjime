@@ -12,7 +12,7 @@ Wants=network-online.target
 Type=simple
 User=@@USER@@
 Group=@@GROUP@@
-WorkingDirectory="@@SRC_DIR@@"
+WorkingDirectory=@@SRC_DIR@@
 Environment="HOME=@@HOME@@"
 Environment=PYTHONUNBUFFERED=1
 EnvironmentFile=/etc/ohjime/telegram.env
