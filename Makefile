@@ -1,4 +1,4 @@
-.PHONY: docs clean daily-summary
+.PHONY: docs clean telegram-collector daily-summary
 
 ARGS ?=
 
@@ -11,10 +11,15 @@ clean:
 	@cd docs && npm cache clean --force
 	@rm -rf docs/node_modules
 
-# Summarize the latest dump: git pull, run the local Qwen3 agent, and write the
-# summary in below the title/date block. Re-running refreshes it in place.
+# Continuously collect Telegram messages into SQLite. Required Telegram
+# credentials and DB_PATH are read from the environment.
+telegram-collector:
+	@cd manage/src && uv run telegram_collector.py
+
+# Drain waiting SQLite messages in context-sized batches with the local Qwen3
+# agent. A failed chunk keeps the same stable batch ID for retry.
 #
-#   make daily-summary                  # summarize and write
-#   make daily-summary ARGS=--dry-run   # preview, write nothing
+#   make daily-summary                  # drain and complete waiting messages
+#   make daily-summary ARGS=--dry-run   # preview one batch, leave it queued
 daily-summary:
 	@cd manage/src && uv run summarize.py $(ARGS)
