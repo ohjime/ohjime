@@ -1,1 +1,1 @@
-Hello World. It is I. 👁️
+Hello World.
